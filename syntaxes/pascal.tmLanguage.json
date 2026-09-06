@@ -1,0 +1,156 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Object Pascal",
+  "scopeName": "source.pascal",
+  "patterns": [
+    { "include": "#comentarios" },
+    { "include": "#diretivas" },
+    { "include": "#strings" },
+    { "include": "#numeros" },
+    { "include": "#declaracoes" },
+    { "include": "#tipos" },
+    { "include": "#palavras" },
+    { "include": "#operadores" }
+  ],
+  "repository": {
+    "comentarios": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.pascal",
+          "begin": "//",
+          "end": "$"
+        },
+        {
+          "comment": "chave que começa com $ é diretiva de compilação, não comentário",
+          "name": "comment.block.pascal",
+          "begin": "\\{(?!\\$)",
+          "end": "\\}"
+        },
+        {
+          "name": "comment.block.pascal",
+          "begin": "\\(\\*",
+          "end": "\\*\\)"
+        }
+      ]
+    },
+    "diretivas": {
+      "patterns": [
+        {
+          "name": "meta.preprocessor.pascal",
+          "begin": "\\{\\$",
+          "end": "\\}",
+          "beginCaptures": { "0": { "name": "keyword.control.directive.pascal" } },
+          "endCaptures": { "0": { "name": "keyword.control.directive.pascal" } },
+          "patterns": [
+            {
+              "name": "keyword.control.directive.pascal",
+              "match": "(?i)\\b(IFDEF|IFNDEF|IFOPT|IF|ELSEIF|ELSE|ENDIF|IFEND|DEFINE|UNDEF|INCLUDE|I|R|H|WARN|HINTS|WARNINGS|OVERFLOWCHECKS|RANGECHECKS|ASSERTIONS|SCOPEDENUMS|M|APPTYPE|REGION|ENDREGION)\\b"
+            }
+          ]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.pascal",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "comment": "duas aspas seguidas são uma aspa literal, não o fim da string",
+              "name": "constant.character.escape.pascal",
+              "match": "''"
+            }
+          ]
+        },
+        {
+          "comment": "#13#10 e #$0D: caractere por código",
+          "name": "constant.character.pascal",
+          "match": "#\\$?[0-9A-Fa-f]+"
+        }
+      ]
+    },
+    "numeros": {
+      "patterns": [
+        { "name": "constant.numeric.hex.pascal", "match": "\\$[0-9A-Fa-f]+\\b" },
+        { "name": "constant.numeric.pascal", "match": "\\b\\d+(\\.\\d+)?([eE][-+]?\\d+)?\\b" }
+      ]
+    },
+    "declaracoes": {
+      "patterns": [
+        {
+          "comment": "nome do método logo após procedure/function, com a classe quando houver",
+          "match": "(?i)\\b(procedure|function|constructor|destructor)\\s+(?:([A-Za-z_]\\w*)(\\.))?([A-Za-z_]\\w*)",
+          "captures": {
+            "1": { "name": "keyword.other.pascal" },
+            "2": { "name": "entity.name.type.pascal" },
+            "3": { "name": "punctuation.accessor.pascal" },
+            "4": { "name": "entity.name.function.pascal" }
+          }
+        },
+        {
+          "comment": "TAlgumaCoisa = class(TOutra)",
+          "match": "(?i)\\b([A-Za-z_]\\w*)\\s*(=)\\s*(class|record|interface|object|packed\\s+record)\\b(?:\\s*(\\()\\s*([A-Za-z_][\\w.]*))?",
+          "captures": {
+            "1": { "name": "entity.name.type.pascal" },
+            "2": { "name": "keyword.operator.pascal" },
+            "3": { "name": "storage.type.pascal" },
+            "4": { "name": "punctuation.definition.pascal" },
+            "5": { "name": "entity.other.inherited-class.pascal" }
+          }
+        },
+        {
+          "match": "(?i)^\\s*(unit|program|library|package)\\s+([A-Za-z_][\\w.]*)",
+          "captures": {
+            "1": { "name": "keyword.other.pascal" },
+            "2": { "name": "entity.name.namespace.pascal" }
+          }
+        }
+      ]
+    },
+    "tipos": {
+      "patterns": [
+        {
+          "name": "support.type.pascal",
+          "match": "(?i)\\b(string|widestring|ansistring|shortstring|unicodestring|char|widechar|ansichar|integer|cardinal|shortint|smallint|longint|int64|uint64|byte|word|longword|nativeint|nativeuint|single|double|extended|currency|real|comp|boolean|bytebool|wordbool|longbool|pointer|variant|olevariant|tobject|tdatetime|tdate|ttime|tarray|file|text)\\b"
+        },
+        {
+          "comment": "convenção do Delphi: T de tipo, I de interface, E de exceção",
+          "name": "entity.name.type.pascal",
+          "match": "\\b(T|I|E)[A-Z]\\w*\\b"
+        }
+      ]
+    },
+    "palavras": {
+      "patterns": [
+        {
+          "name": "keyword.control.pascal",
+          "match": "(?i)\\b(begin|end|if|then|else|case|of|while|do|repeat|until|for|to|downto|try|except|finally|raise|with|goto|exit|break|continue|asm)\\b"
+        },
+        {
+          "name": "keyword.other.pascal",
+          "match": "(?i)\\b(unit|uses|interface|implementation|initialization|finalization|program|library|package|requires|contains|exports|label|const|resourcestring|type|var|threadvar|procedure|function|constructor|destructor|property|class|record|object|array|set|file|packed|inherited|nil|out|inline|operator)\\b"
+        },
+        {
+          "name": "storage.modifier.pascal",
+          "match": "(?i)\\b(private|protected|public|published|strict|automated|virtual|dynamic|override|overload|abstract|sealed|final|reintroduce|static|forward|external|stdcall|cdecl|safecall|register|pascal|winapi|assembler|deprecated|platform|experimental|message|dispid|read|write|default|stored|index|implements|nodefault|helper|reference)\\b"
+        },
+        { "name": "constant.language.pascal", "match": "(?i)\\b(true|false|nil)\\b" },
+        {
+          "name": "variable.language.pascal",
+          "match": "(?i)\\b(self|result|sender)\\b"
+        }
+      ]
+    },
+    "operadores": {
+      "patterns": [
+        {
+          "name": "keyword.operator.logical.pascal",
+          "match": "(?i)\\b(and|or|not|xor|div|mod|shl|shr|in|is|as)\\b"
+        },
+        { "name": "keyword.operator.pascal", "match": "(:=|<>|<=|>=|[-+*/=<>@^])" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,758 @@
+/* O form é uma janela Windows: sempre claro, independente do tema do VS Code.
+   Só a moldura em volta segue o tema do editor. */
+:root {
+  --ink: var(--vscode-foreground);
+  --line: var(--vscode-panel-border, #454545);
+  --accent: var(--vscode-focusBorder, #0a84ff);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 12px "Segoe UI", var(--vscode-font-family), system-ui, sans-serif;
+  background: var(--vscode-editor-background);
+  color: var(--ink);
+}
+
+.bar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; gap: 14px; align-items: center;
+  padding: 6px 12px; font-size: 11px;
+  background: var(--vscode-editorWidget-background, #252526);
+  border-bottom: 1px solid var(--line);
+}
+.bar b { color: var(--vscode-foreground); }
+.bar .sp { flex: 1; }
+.bar .st { color: var(--vscode-testing-iconPassed, #6a9955); }
+.bar .st.err { color: var(--vscode-errorForeground, #f48771); }
+
+.wrap { padding: 24px; display: inline-block; }
+
+/* --- a janela do form --- */
+/*
+ * A moldura é `outline`, não `border`, de propósito.
+ *
+ * Com `box-sizing: border-box`, uma borda de 1px come 1px de cada lado da largura — e a
+ * `width` do `.form` é o ClientWidth do `.dfm`. O resultado era uma área cliente 2px mais
+ * estreita que a do Delphi, com tudo dentro deslocado. `outline` desenha por fora e não
+ * ocupa espaço nenhum.
+ */
+.form {
+  position: relative; background: #f0f0f0; color: #000;
+  outline: 1px solid #6d6d6d; box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+  font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px;
+}
+/*
+ * Altura fixa, casada com ALTURA_TITULO do render.
+ *
+ * Chegar nela por `padding` + `line-height` fazia a área cliente andar sempre que a fonte
+ * mudava — e todo componente do form ia junto.
+ */
+.title {
+  background: linear-gradient(#fff, #e2e2e2); border-bottom: 1px solid #b5b5b5;
+  font-weight: 600; padding: 0 9px; color: #000;
+  height: 26px; line-height: 25px; overflow: hidden; white-space: nowrap;
+}
+.menubar {
+  position: absolute; left: 0; right: 0; top: 26px; height: 20px; z-index: 3;
+  display: flex; align-items: center; gap: 2px; padding: 0 4px;
+  background: #f0f0f0; border-bottom: 1px solid #d4d4d4; overflow: hidden;
+}
+.menubar span { padding: 2px 8px; font-size: 12px; color: #000; white-space: nowrap; }
+
+.c { position: absolute; box-sizing: border-box; overflow: hidden; }
+/* área cliente do form: recebe os componentes, mas não é um deles — por isso não é .c,
+   senão o closest('.c') do front a selecionaria como se fosse componente */
+.client { position: absolute; box-sizing: border-box; overflow: hidden; background: #f0f0f0; }
+.grid-on .client {
+  background-image: radial-gradient(#c4c4c4 1px, transparent 1px);
+  background-size: 8px 8px; background-position: -1px -1px;
+}
+.cap {
+  position: absolute; left: 3px; top: 2px; white-space: nowrap; pointer-events: none;
+}
+.ph { color: #9a9a9a; font-style: italic; }
+.lcap {
+  position: absolute; white-space: nowrap; pointer-events: none; color: #000; font-size: 12px;
+}
+
+.btn { background: linear-gradient(#fdfdfd, #e1e1e1); border: 1px solid #adadad; border-radius: 3px; }
+.btn > .cap { left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; }
+.btn > .ico + .cap { left: 20px; right: 2px; text-align: left; }
+.edit { background: #fff; border: 1px solid #7a7a7a; }
+.edit > .cap { top: 50%; transform: translateY(-50%); color: #666; }
+.lbl > .cap { top: 0; }
+/*
+ * Sem `border` nos containers: o recuo da área cliente é calculado no layout, a partir do
+ * `BevelOuter`/`BorderWidth` do próprio `.dfm`. Uma borda aqui descontaria de novo, e o erro
+ * somaria a cada nível de aninhamento.
+ */
+.panel { background: #f0f0f0; box-shadow: inset 0 0 0 1px #c9c9c9; }
+.panel > .cap { left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; }
+.grid {
+  background: #fff; box-shadow: inset 0 0 0 1px #7a7a7a;
+  background-image: linear-gradient(#e9e9e9 1px, transparent 1px);
+  background-size: 100% 18px; background-position: 0 17px;
+}
+.tab { background: #f0f0f0; border: 1px solid #a0a0a0; }
+.misc { border: 1px dashed #9a9a9a; background: #fafafa; }
+.chk::before {
+  content: ""; position: absolute; left: 1px; top: 50%; margin-top: -6px;
+  width: 12px; height: 12px; background: #fff; border: 1px solid #7a7a7a;
+}
+.chk > .cap { left: 18px; top: 50%; transform: translateY(-50%); }
+.image {
+  border: 1px solid #c0c0c0;
+  background: repeating-conic-gradient(#f4f4f4 0 25%, #e6e6e6 0 50%) 0 0 / 14px 14px;
+}
+.emb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.bevel { border: 1px solid #dfdfdf; border-right-color: #fff; border-bottom-color: #fff; }
+.splitter { background: #ececec; border: 1px solid #dcdcdc; }
+.splitter::after { content: ""; position: absolute; background: #b8b8b8; border-radius: 1px; }
+.sp-v::after { left: 50%; margin-left: -1px; top: 50%; margin-top: -11px; width: 2px; height: 22px; }
+.sp-h::after { top: 50%; margin-top: -1px; left: 50%; margin-left: -11px; height: 2px; width: 22px; }
+.shape { border: 1px solid #444; background: #fff; }
+.spin { background: #fff; border: 1px solid #7a7a7a; }
+.spin::after {
+  content: ""; position: absolute; right: 1px; top: 1px; bottom: 1px; width: 14px;
+  background: linear-gradient(#f4f4f4, #dcdcdc); border-left: 1px solid #adadad;
+}
+.progress { background: #e6e6e6; border: 1px solid #b5b5b5; border-radius: 2px; }
+.progress::after {
+  content: ""; position: absolute; left: 1px; top: 1px; bottom: 1px; width: 42%;
+  background: linear-gradient(#4fc3f7, #0a84ff); border-radius: 1px;
+}
+.web { background: #fff; border: 1px solid #9a9a9a; }
+.web::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 16px;
+  background: linear-gradient(#f2f2f2, #e2e2e2); border-bottom: 1px solid #c8c8c8;
+}
+.is-default { box-shadow: 0 0 0 1px #4a90d9 inset; border-color: #4a90d9 !important; }
+.invis { opacity: .4; outline: 1px dashed #d33; outline-offset: -1px; }
+.ico {
+  position: absolute; left: 3px; top: 50%; margin-top: -7px; width: 14px; height: 14px;
+  background: linear-gradient(135deg, #9dc3e6, #4a90d9);
+  border: 1px solid #6f9fd0; border-radius: 2px;
+}
+.ro-mark {
+  position: absolute; right: 0; top: 0; border-width: 0 6px 6px 0; border-style: solid;
+  border-color: transparent #c8a020 transparent transparent;
+}
+
+/* abas */
+.tabbar {
+  position: absolute; left: 0; top: 0; right: 0; height: 24px; z-index: 2;
+  display: flex; gap: 2px; padding: 3px 3px 0; overflow: hidden;
+}
+.tabbar.tb-bottom { top: auto; bottom: 0; align-items: flex-end; padding: 0 3px 3px; }
+.tabbar.tb-left, .tabbar.tb-right {
+  flex-direction: column; width: 84px; height: auto; bottom: 0; right: auto; padding: 3px 0 3px 3px;
+}
+.tabbar.tb-right { left: auto; right: 0; padding: 3px 3px 3px 0; }
+.tabbtn {
+  background: linear-gradient(#eee, #dcdcdc); border: 1px solid #a0a0a0; border-bottom: 0;
+  border-radius: 3px 3px 0 0; padding: 2px 9px; font-size: 11px; line-height: 15px;
+  cursor: pointer; white-space: nowrap; color: #000; flex: 0 0 auto;
+}
+.tabbtn.on { background: #f0f0f0; font-weight: 600; }
+
+/* grids e barras */
+.ghead {
+  position: absolute; left: 0; right: 0; top: 0; height: 17px; z-index: 1;
+  display: flex; overflow: hidden;
+  background: linear-gradient(#f7f7f7, #e6e6e6); border-bottom: 1px solid #b5b5b5;
+}
+.ghead > span {
+  border-right: 1px solid #c8c8c8; padding: 1px 4px; font-size: 11px;
+  white-space: nowrap; overflow: hidden; flex: 0 0 auto; color: #000;
+}
+.vrows { position: absolute; inset: 0; overflow: hidden; background: #fff; }
+.vrow { display: flex; height: 18px; border-bottom: 1px solid #e4e4e4; font-size: 11px; color: #000; }
+.vrow span {
+  flex: 0 0 45%; padding: 1px 5px; background: #f4f4f4; border-right: 1px solid #dcdcdc;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vrow i { flex: 1; }
+.vcat span { background: #e2e6ea; font-weight: 600; flex: 1; border-right: 0; }
+.tbar {
+  position: absolute; inset: 0; display: flex; gap: 3px; align-items: center;
+  padding: 0 3px; overflow: hidden;
+}
+.tbar > span {
+  background: linear-gradient(#fdfdfd, #e6e6e6); border: 1px solid #b8b8b8; border-radius: 3px;
+  padding: 2px 7px; font-size: 11px; white-space: nowrap; color: #000; flex: 0 0 auto;
+}
+
+/* layout recalculado */
+.lgroup { box-sizing: border-box; }
+.lgcap {
+  position: absolute; left: 6px; top: 1px; font-size: 11px; color: #000;
+  background: #f0f0f0; padding: 0 3px;
+}
+.litem { box-sizing: border-box; }
+.lcap-i { white-space: nowrap; color: #000; font-size: 12px; flex: 0 0 auto; }
+.lsep { flex: 1; height: 1px; background: #c8c8c8; align-self: center; }
+.llabel { flex: 1; }
+
+/* interação */
+.drag { cursor: move; }
+.lay { cursor: grab; }
+.ro { cursor: not-allowed; }
+.dragging { opacity: .55; }
+.target { outline: 2px dashed #24b47e !important; outline-offset: -1px; }
+.grip {
+  position: absolute; width: 8px; height: 8px; z-index: 5; opacity: 0;
+  background: var(--accent); border: 1px solid #fff;
+}
+.c:hover > .grip, .sel > .grip { opacity: 1; }
+.g-nw { left: -1px; top: -1px; cursor: nwse-resize; }
+.g-n { left: 50%; margin-left: -4px; top: -1px; cursor: ns-resize; }
+.g-ne { right: -1px; top: -1px; cursor: nesw-resize; }
+.g-e { right: -1px; top: 50%; margin-top: -4px; cursor: ew-resize; }
+.g-se { right: -1px; bottom: -1px; cursor: nwse-resize; }
+.g-s { left: 50%; margin-left: -4px; bottom: -1px; cursor: ns-resize; }
+.g-sw { left: -1px; bottom: -1px; cursor: nesw-resize; }
+.g-w { left: -1px; top: 50%; margin-top: -4px; cursor: ew-resize; }
+
+#lasso {
+  position: fixed; z-index: 45; pointer-events: none;
+  border: 1px dashed var(--accent); background: rgba(10, 132, 255, .12);
+}
+
+/* menu de contexto, no estilo dos menus do VS Code */
+#ctx {
+  position: fixed; z-index: 60; min-width: 210px; padding: 4px 0;
+  background: var(--vscode-menu-background, #252526);
+  color: var(--vscode-menu-foreground, #cccccc);
+  border: 1px solid var(--vscode-menu-border, #454545);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .45); font-size: 12px;
+}
+.ctx-h {
+  padding: 5px 12px 3px; font-size: 9.5px; letter-spacing: .7px; text-transform: uppercase;
+  color: var(--vscode-descriptionForeground, #8a8a8a);
+  border-top: 1px solid var(--vscode-menu-separatorBackground, #3a3a3a); margin-top: 3px;
+}
+.ctx-h:first-child { border-top: 0; margin-top: 0; }
+.ctx-i {
+  padding: 4px 12px; cursor: pointer; display: flex; gap: 18px; align-items: center;
+  white-space: nowrap;
+}
+.ctx-i:hover {
+  background: var(--vscode-menu-selectionBackground, #04395e);
+  color: var(--vscode-menu-selectionForeground, #fff);
+}
+.ctx-i s { margin-left: auto; text-decoration: none; opacity: .6; font-size: 11px; }
+.c:hover { outline: 2px solid var(--accent); outline-offset: -1px; }
+.sel { outline: 2px solid #ff9d00 !important; outline-offset: -1px; }
+.multi {
+  outline: 2px dashed #ff9d00 !important; outline-offset: -1px;
+  background-image: linear-gradient(rgba(255, 157, 0, .12), rgba(255, 157, 0, .12));
+}
+.hl { outline: 2px solid #24b47e !important; outline-offset: -1px; }
+#guides { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 40; }
+#guides i { position: absolute; background: #ff3b8b; display: block; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* --- painel lateral: estrutura em cima, propriedades embaixo --- */
+#side {
+  position: fixed; right: 0; top: 33px; bottom: 0; width: 320px; z-index: 20;
+  display: flex; flex-direction: column; font-size: 11px;
+  background: var(--vscode-sideBar-background, #252526);
+  border-left: 1px solid var(--line);
+}
+.has-side .wrap { margin-right: 330px; }
+.pane-h {
+  padding: 7px 12px; font-size: 10px; font-weight: 600; letter-spacing: .7px;
+  text-transform: uppercase; color: var(--vscode-descriptionForeground, #9a9a9a);
+  border-bottom: 1px solid var(--line); display: flex; justify-content: space-between;
+}
+.pane-h span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+#struct { overflow: auto; flex: 0 0 40%; min-height: 60px; }
+#oi { overflow: auto; flex: 1; min-height: 0; }
+.st-r {
+  display: flex; gap: 6px; align-items: baseline; padding: 2px 8px; cursor: pointer;
+  white-space: nowrap; color: var(--vscode-foreground);
+}
+.st-r:hover { background: var(--vscode-list-hoverBackground, #2a2d2e); }
+.st-r.on { background: var(--vscode-list-activeSelectionBackground, #04395e); }
+.st-r em { font-style: normal; overflow: hidden; text-overflow: ellipsis; }
+.st-r s {
+  text-decoration: none; font-size: 10px; overflow: hidden; text-overflow: ellipsis;
+  color: var(--vscode-descriptionForeground, #7a7a7a);
+}
+.st-nv em { opacity: .7; }
+.st-ext em::after { content: "↗"; color: #c8a020; margin-left: 3px; font-size: 9px; }
+
+.oi-empty, .oi-warn, .oi-via { padding: 8px 10px; }
+.oi-empty { color: var(--vscode-descriptionForeground, #8a8a8a); }
+.oi-warn { background: rgba(200, 160, 32, .15); color: #d2a24c; }
+.oi-via { background: rgba(106, 153, 85, .15); color: #6a9955; }
+.oi-head {
+  padding: 7px 10px; font-weight: 600; position: sticky; top: 0; z-index: 1;
+  background: var(--vscode-sideBarSectionHeader-background, #333337);
+  border-bottom: 1px solid var(--line);
+}
+.oi-head span { float: right; font-weight: 400; opacity: .7; }
+.oi-crumbs {
+  padding: 5px 10px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center;
+  font-size: 10.5px; border-bottom: 1px solid var(--line);
+}
+.oi-crumbs span { color: var(--vscode-textLink-foreground, #9cdcfe); cursor: pointer; }
+.oi-crumbs span:last-child { color: var(--vscode-foreground); cursor: default; }
+.oi-crumbs i { opacity: .5; font-style: normal; }
+.oi-lgrp {
+  padding: 4px 10px; cursor: pointer; color: var(--vscode-textLink-foreground, #9cdcfe);
+  border-bottom: 1px solid var(--line);
+}
+.oi-lgrp:hover { background: var(--vscode-list-hoverBackground, #37373d); }
+.oi-lgrp span { float: right; color: var(--vscode-foreground); opacity: .8; }
+.oi-filter { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.oi-filter input, .oi-row input, .oi-row select {
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #e8e8e8);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 3px 6px; font: inherit; font-family: inherit;
+}
+.oi-filter input { width: 100%; border-radius: 2px; }
+.oi-sec {
+  padding: 4px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--vscode-descriptionForeground, #8a8a8a); cursor: pointer;
+  background: var(--vscode-editor-background); border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 6px;
+}
+.oi-sec i { font-style: normal; font-size: 9px; }
+.oi-sec.closed i { transform: rotate(-90deg); }
+.oi-sec b { margin-left: auto; font-weight: 400; opacity: .6; }
+.oi-grp { display: block; }
+.oi-row { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.oi-row label {
+  flex: 0 0 43%; padding: 3px 8px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: var(--vscode-foreground);
+}
+.oi-row input, .oi-row select { flex: 1; min-width: 0; border-left: 1px solid var(--line); }
+.oi-row input:disabled, .oi-row select:disabled { opacity: .55; font-style: italic; }
+.oi-abs label { opacity: .6; font-style: italic; }
+.oi-inh label { opacity: .75; font-style: italic; }
+.oi-ev {
+  flex: 1; min-width: 0; text-align: left; cursor: pointer; padding: 3px 6px; font: inherit;
+  background: var(--vscode-input-background, #1e1e1e);
+  color: var(--vscode-textLink-foreground, #9cdcfe);
+  border: 0; border-left: 1px solid var(--line);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.oi-ev:hover { text-decoration: underline; }
+
+/* --- data module: superfície de ícones, como o designer do Delphi --- */
+.dm-surface {
+  background: #f0f0f0;
+  background-image: radial-gradient(#d0d0d0 1px, transparent 1px);
+  background-size: 8px 8px; background-position: -1px -1px;
+}
+.tray {
+  position: absolute; width: 74px; padding: 4px 2px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: #000; font-size: 11px; text-align: center;
+}
+.tray em {
+  font-style: normal; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; line-height: 1.25;
+}
+.tray b {
+  position: absolute; right: 8px; top: 2px; min-width: 15px; padding: 0 3px;
+  background: #6f9fd0; color: #fff; border-radius: 7px;
+  font: 600 9px/14px "Segoe UI", sans-serif;
+}
+.tico {
+  width: 28px; height: 28px; border-radius: 4px; border: 1px solid #7f9db9;
+  background: linear-gradient(#fbfcfe, #dbe6f1); display: block; position: relative;
+}
+.tico::after {
+  content: ""; position: absolute; inset: 6px;
+  border: 2px solid #4a7ab0; border-radius: 2px;
+}
+.tray .k-grid::after { border-style: double; }
+.tray .k-misc::after { border-style: solid; }
+.tray:hover { outline: 1px solid var(--accent); }
+.tray.sel { outline: 2px solid #ff9d00; }
+.tray.multi { outline: 2px dashed #ff9d00; }
+.tray.hl { outline: 2px solid #24b47e; }
+.tray .grip { opacity: 0; }
+.tray:hover .grip, .tray.sel .grip { opacity: 1; }
+
+/* --- diálogo modal (ordem de tabulação) --- */
+/*
+ * O atributo `hidden` não esconde elemento que declara `display` próprio: a regra do
+ * user-agent perde para qualquer regra de autor. Sem o `!important` abaixo, este overlay
+ * (preto a 45%, cobrindo a tela inteira) fica visível o tempo todo — o form aparece
+ * escurecido e nenhum clique chega nele.
+ */
+[hidden] { display: none !important; }
+
+#dlg {
+  position: fixed; inset: 0; z-index: 70; display: flex;
+  align-items: center; justify-content: center; background: rgba(0, 0, 0, .45);
+}
+.dlg-box {
+  min-width: 330px; max-width: 460px; max-height: 78vh; display: flex; flex-direction: column;
+  background: var(--vscode-editorWidget-background, #252526);
+  border: 1px solid var(--vscode-widget-border, #454545);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .5);
+}
+.dlg-h {
+  padding: 10px 14px; font-weight: 600; font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.dlg-hint {
+  padding: 8px 14px 4px; font-size: 11px;
+  color: var(--vscode-descriptionForeground, #9a9a9a);
+}
+.dlg-list { overflow: auto; padding: 4px 8px 8px; flex: 1; }
+.to-i {
+  display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: grab;
+  border: 1px solid transparent; font-size: 12px;
+}
+.to-i:hover { background: var(--vscode-list-hoverBackground, #2a2d2e); }
+.to-i.on {
+  background: var(--vscode-list-activeSelectionBackground, #04395e);
+  border-color: var(--accent);
+}
+.to-i.arrastando { opacity: .45; }
+.to-i i { font-style: normal; opacity: .45; cursor: grab; }
+.to-i em { font-style: normal; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.to-i s { text-decoration: none; opacity: .55; font-size: 11px; }
+.dlg-acoes {
+  display: flex; gap: 8px; align-items: center; padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.dlg-acoes .sp { flex: 1; }
+.dlg-acoes button {
+  background: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #fff);
+  border: 0; border-radius: 2px; padding: 4px 12px; cursor: pointer; font: inherit;
+}
+.dlg-acoes button.primario {
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #fff);
+}
+.dlg-acoes button:hover { filter: brightness(1.15); }
+.oi-novo { color: var(--vscode-charts-green, #6a9955); font-style: italic; }
+.oi-novo:hover { color: var(--vscode-charts-green, #89d185); }
+
+/* paleta de componentes */
+.dlg-busca { padding: 6px 10px; }
+.dlg-busca input {
+  width: 100%; box-sizing: border-box; padding: 5px 8px; font: inherit; border-radius: 2px;
+  background: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #e8e8e8);
+  border: 1px solid var(--vscode-input-border, transparent);
+}
+.dlg-busca input:focus { outline: 0; border-color: var(--accent); }
+.pl-i {
+  display: flex; align-items: center; gap: 9px; padding: 5px 10px; cursor: pointer;
+  font-size: 12px;
+}
+.pl-i:hover { background: var(--vscode-list-hoverBackground, #2a2d2e); }
+.pl-i em { font-style: normal; flex: 1; }
+.pl-i s { text-decoration: none; opacity: .5; font-size: 10.5px; }
+.pl-nv {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; opacity: .6;
+  border: 1px solid currentColor; border-radius: 2px; padding: 0 4px;
+}
+.pl-k {
+  width: 13px; height: 13px; border-radius: 2px; flex: 0 0 auto;
+  background: linear-gradient(135deg, #9dc3e6, #4a90d9); border: 1px solid #6f9fd0;
+}
+.pl-k.k-lbl { background: linear-gradient(135deg, #dcdcaa, #b8a94a); border-color: #a89a3e; }
+.pl-k.k-grid { background: linear-gradient(135deg, #a5d6a7, #4caf50); border-color: #43a047; }
+.pl-k.k-panel { background: linear-gradient(135deg, #d0d0d0, #9e9e9e); border-color: #8a8a8a; }
+.pl-k.k-misc { background: linear-gradient(135deg, #e0b0d5, #b56ba5); border-color: #a05e93; }
+
+/* ── inspetor: abas, sub-propriedades e editores compostos ───────────────── */
+.oi-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.oi-tabs button {
+  flex: 1;
+  padding: 3px 6px;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+}
+.oi-tabs button.on {
+  background: var(--bg2);
+  border-color: var(--line);
+}
+.oi-tabs button b { margin-left: 4px; font-weight: 400; opacity: .55; }
+.oi-tabs #oi-alpha { flex: 0 0 28px; }
+
+.oi-own label { font-weight: 600; }
+
+.oi-subh {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 16px;
+  cursor: pointer;
+  opacity: .85;
+  border-bottom: 1px solid var(--line);
+}
+.oi-subh i { font-style: normal; font-size: 9px; }
+.oi-subh b { margin-left: auto; font-weight: 400; opacity: .6; }
+.oi-subrow label { padding-left: 22px; }
+
+.oi-cor { display: flex; flex: 1; min-width: 0; }
+.oi-cor .oi-swatch {
+  flex: 0 0 26px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+}
+.oi-cor .oi-cortxt { flex: 1; min-width: 0; }
+
+.oi-blk {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.oi-blk:hover { background: var(--bg2); }
+.oi-blk:disabled { opacity: .55; cursor: default; }
+
+#dlg textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: 12px var(--mono, monospace);
+  color: var(--fg);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  padding: 4px 6px;
+  resize: vertical;
+}
+.dlg-set { display: flex; flex-direction: column; gap: 4px; padding: 4px 8px 8px; }
+.dlg-set label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.col-i {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.col-i em { flex: 1; min-width: 0; font-style: normal; overflow: hidden; text-overflow: ellipsis; }
+.col-i s {
+  flex: 0 0 20px;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: .6;
+  border-radius: 3px;
+}
+.col-i s:hover { opacity: 1; background: var(--bg2); }
+
+/* ── barra: travar e zoom ────────────────────────────────────────────────── */
+.bar .sp2 { width: 12px; }
+.barbtn {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0 5px;
+  cursor: pointer;
+}
+.barbtn:hover { background: var(--bg2); border-color: var(--line); }
+#zlvl { min-width: 42px; font-variant-numeric: tabular-nums; }
+
+.travado .c { cursor: default !important; }
+.travado .grip { display: none !important; }
+
+/* coordenadas junto do cursor enquanto arrasta (D12) */
+#hud {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font: 11px var(--mono, monospace);
+  font-variant-numeric: tabular-nums;
+  color: var(--vscode-editorHoverWidget-foreground, #ddd);
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  border: 1px solid var(--line);
+}
+
+/* ── faixa dos não visuais (P05) ─────────────────────────────────────────── */
+.nv-tray {
+  margin-top: 10px;
+  padding: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.nv-h {
+  width: 100%;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  opacity: .6;
+}
+.nv-h b { font-weight: 400; }
+.nv-i {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg2);
+  cursor: pointer;
+  max-width: 190px;
+}
+.nv-i em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nv-i b { font-weight: 400; opacity: .6; }
+.nv-i.ro { opacity: .65; }
+.nv-i.sel { outline: 2px solid var(--vscode-focusBorder, #007fd4); outline-offset: -1px; }
+
+/* ── paleta acoplada (P02, P04) ──────────────────────────────────────────── */
+.pal {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+.pal-cats {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.pal-cats .sp { flex: 1; }
+.pal-cats button {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.pal-cats button:hover { background: var(--bg2); }
+.pal-cats button.on { background: var(--bg2); border-color: var(--line); }
+.pal-cats button b { margin-left: 4px; font-weight: 400; opacity: .55; }
+.pal-cats input {
+  width: 130px;
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.pal-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  max-height: 132px;
+  overflow: auto;
+}
+.pal-vazio { opacity: .6; padding: 4px; }
+.pal-list .pl-i {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg2);
+  cursor: grab;
+}
+.pal-list .pl-i:hover { border-color: var(--vscode-focusBorder, #007fd4); }
+.pal-list .pl-i em { font-style: normal; }
+.pal-list .pl-i s { text-decoration: none; opacity: .5; font-variant-numeric: tabular-nums; }
+.pl-nv { font-size: 9px; opacity: .6; text-transform: uppercase; }
+
+.drop-alvo { outline: 2px dashed var(--vscode-focusBorder, #007fd4) !important; outline-offset: -2px; }
+
+/* ── caixas de inserir frame / modelo e editor de menu ───────────────────── */
+.esc-i {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.esc-i:hover { background: var(--bg2); }
+.esc-i em { font-style: normal; flex: 1; }
+.esc-i s { text-decoration: none; opacity: .6; font-variant-numeric: tabular-nums; }
+.esc-u { opacity: .5; font-size: 11px; }
+
+.mn-i {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.mn-i.on { background: var(--bg2); outline: 1px solid var(--vscode-focusBorder, #007fd4); }
+.mn-i input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+.mn-i input:focus { background: var(--bg2); border-color: var(--line); }
+.mn-i s { text-decoration: none; opacity: .45; font-size: 11px; }
+.mn-sep { flex: 1; font-style: normal; opacity: .45; }
+
+/* alça do próprio form: fica na quina de baixo à direita, fora da área cliente */
+.form-grip {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  cursor: nwse-resize;
+  background: var(--vscode-focusBorder, #007fd4);
+  border: 1px solid var(--bg);
+  border-radius: 2px;
+  z-index: 5;
+}
+.travado .form-grip { display: none; }
+
+/* imagem que mora dentro de um TdxLayoutImageItem, sem controle associado */
+.limg { display: block; max-width: 100%; height: auto; object-fit: contain; }
+
+.pal-conta { font-size: 11px; opacity: .6; margin-right: 6px; font-variant-numeric: tabular-nums; }
+
+.pal-list .pl-i.on {
+  border-color: var(--vscode-focusBorder, #007fd4);
+  background: var(--vscode-list-activeSelectionBackground, #094771);
+}

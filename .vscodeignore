@@ -1,0 +1,9 @@
+.vscode/**
+node_modules/**
+src/**
+out/test/**
+tsconfig.json
+*.vsix
+crosscheck-ts.json
+node_modules/vscode-textmate/**
+node_modules/vscode-oniguruma/**

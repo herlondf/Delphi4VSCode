@@ -1,0 +1,10 @@
+node_modules/
+out/
+*.vsix
+
+# scripts de diagnóstico e rascunho
+sandbox/
+diag*.js
+
+# configuração de projeto do DelphiLSP: gerada, e cheia de caminhos da máquina
+*.delphilsp.json

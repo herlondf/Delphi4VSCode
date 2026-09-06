@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Delphi Form",
+  "scopeName": "source.dfm",
+  "patterns": [
+    { "include": "#objeto" },
+    { "include": "#fim" },
+    { "include": "#binario" },
+    { "include": "#propriedade" },
+    { "include": "#colecao" },
+    { "include": "#valores" }
+  ],
+  "repository": {
+    "objeto": {
+      "comment": "object Nome: TClasse — e as variantes inherited (form herdado) e inline (frame)",
+      "match": "(?i)^\\s*(object|inherited|inline)\\s+(?:([A-Za-z_][\\w.]*)\\s*(:)\\s*)?([A-Za-z_][\\w.]*)\\s*(\\[\\d+\\])?",
+      "captures": {
+        "1": { "name": "keyword.control.dfm" },
+        "2": { "name": "entity.name.tag.dfm" },
+        "3": { "name": "punctuation.separator.dfm" },
+        "4": { "name": "entity.name.type.dfm" },
+        "5": { "name": "constant.numeric.dfm" }
+      }
+    },
+    "fim": {
+      "match": "(?i)^\\s*(end)\\s*(>)?\\s*$",
+      "captures": {
+        "1": { "name": "keyword.control.dfm" },
+        "2": { "name": "punctuation.definition.dfm" }
+      }
+    },
+    "propriedade": {
+      "comment": "Nome.Sub = valor",
+      "match": "^\\s*([A-Za-z_][\\w]*)((?:\\.[A-Za-z_]\\w*)*)\\s*(=)",
+      "captures": {
+        "1": { "name": "variable.other.property.dfm" },
+        "2": { "name": "variable.other.member.dfm" },
+        "3": { "name": "keyword.operator.assignment.dfm" }
+      }
+    },
+    "colecao": {
+      "patterns": [
+        {
+          "comment": "item ... end dentro de uma coleção <>",
+          "match": "(?i)^\\s*(item)\\s*$",
+          "captures": { "1": { "name": "keyword.control.dfm" } }
+        },
+        { "name": "punctuation.definition.collection.dfm", "match": "^\\s*[<>]\\s*$" }
+      ]
+    },
+    "binario": {
+      "comment": "bloco { hexadecimal } de imagens e outros dados embutidos",
+      "name": "string.unquoted.binary.dfm",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": { "0": { "name": "punctuation.definition.binary.dfm" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.binary.dfm" } }
+    },
+    "valores": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.dfm",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "name": "constant.character.escape.dfm", "match": "''" }
+          ]
+        },
+        { "name": "constant.character.dfm", "match": "#\\$?[0-9A-Fa-f]+" },
+        { "name": "constant.language.boolean.dfm", "match": "\\b(True|False)\\b" },
+        { "name": "constant.numeric.hex.dfm", "match": "\\$[0-9A-Fa-f]+\\b" },
+        { "name": "constant.numeric.dfm", "match": "(?<![\\w.])-?\\d+(\\.\\d+)?\\b" },
+        {
+          "comment": "conjuntos como [akLeft, akTop]",
+          "name": "meta.set.dfm",
+          "begin": "\\[",
+          "end": "\\]",
+          "patterns": [
+            { "name": "constant.other.enum.dfm", "match": "\\b[a-z]{2,}[A-Z]\\w*\\b" }
+          ]
+        },
+        {
+          "comment": "identificadores de enum do Delphi: prefixo minúsculo + PascalCase",
+          "name": "constant.other.enum.dfm",
+          "match": "(?<==\\s)\\s*\\b(?:al|ta|ah|av|cl|bs|tp|ld|mr|fs|ds|dal|cx|bo|pm|ss|ws|po|bd|ma|ca|se)[A-Z]\\w*\\b"
+        },
+        {
+          "comment": "referência a outro componente: Prop = NomeDoComponente",
+          "match": "(=)\\s*([A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*)*)\\s*$",
+          "captures": {
+            "1": { "name": "keyword.operator.assignment.dfm" },
+            "2": { "name": "variable.other.dfm" }
+          }
+        }
+      ]
+    }
+  }
+}

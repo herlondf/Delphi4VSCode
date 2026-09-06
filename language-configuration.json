@@ -1,0 +1,12 @@
+{
+  "comments": { "blockComment": ["{", "}"] },
+  "brackets": [["<", ">"], ["(", ")"], ["[", "]"], ["{", "}"]],
+  "autoClosingPairs": [
+    { "open": "'", "close": "'" },
+    { "open": "<", "close": ">" }
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "^\s*(object|inherited|inline|item)\b.*$",
+    "decreaseIndentPattern": "^\s*end\b.*$"
+  }
+}

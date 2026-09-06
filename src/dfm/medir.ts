@@ -1,0 +1,302 @@
+/**
+ * Calcula o layout do `TdxLayoutControl` em números, em vez de delegar ao flexbox.
+ *
+ * O motor anterior emitia `display:flex` e deixava o navegador resolver. Funcionava para o
+ * caso simples e falhava em três de uma vez, todos vistos em forms reais:
+ *
+ *  - um controle com `flex: 1 1 auto` encolhia abaixo da altura declarada e o botão saía
+ *    cortado ao meio;
+ *  - um item que crescia ficava com o controle centrado dentro, deixando um vão enorme;
+ *  - e o pior: o controle que o CSS esticava não avisava os próprios filhos, que já tinham
+ *    sido posicionados com o tamanho antigo — um `TdxLayoutControl` aninhado numa aba ficava
+ *    com a largura gravada no ancestral e cortava tudo dentro.
+ *
+ * Com o cálculo aqui, o tamanho de cada controle é conhecido antes de desenhar, e os filhos
+ * recebem o valor certo. É o que o próprio `TdxLayoutControl` faz em runtime.
+ */
+
+import { DfmNode, num, txt, flag } from './model';
+import { Registry } from './registry';
+import { LayoutInfo, Rect, layoutCaption, sizeOf } from './layout';
+
+/** Espaço entre irmãos, e recuo de um grupo que desenha moldura com rótulo. */
+export const GAP = 3;
+export const RECUO_GRUPO = 5;
+export const ALTO_CAPTION = 14;
+/** Faixa de abas de um grupo `ldTabbed`. */
+export const ALTO_ABA = 22;
+/** Largura reservada ao rótulo à esquerda de um item. */
+export const LARGURA_CAPTION = 8;
+
+export interface Medida {
+  /** Retângulo do item ou grupo, relativo ao host. */
+  rect: Rect;
+  /** Retângulo do controle dentro do item, quando há um. */
+  controle?: { node: DfmNode; rect: Rect };
+  info: LayoutInfo;
+  filhos: Medida[];
+  /** Rótulo do item e onde ele fica. */
+  caption?: { texto: string; pos: string; rect: Rect };
+  /** Rótulos das abas, quando o grupo é `ldTabbed`; os filhos são as páginas. */
+  abas?: string[];
+}
+
+function direcao(info: LayoutInfo): string {
+  return txt(info.node, 'layoutdirection', 'ldVertical').toLowerCase();
+}
+
+function ehHorizontal(info: LayoutInfo): boolean {
+  return direcao(info) === 'ldhorizontal';
+}
+
+/** Grupo em abas: os filhos são páginas sobrepostas, não irmãos numa fila. */
+function ehTabbed(info: LayoutInfo): boolean {
+  return direcao(info) === 'ldtabbed';
+}
+
+function alinhamento(n: DfmNode): { h: string; v: string } {
+  return {
+    h: txt(n, 'alignhorz', '').toLowerCase(),
+    v: txt(n, 'alignvert', '').toLowerCase(),
+  };
+}
+
+/**
+ * Item empilhado ocupa a largura do grupo, mas não a altura.
+ *
+ * É a regra do dx que menos se documenta e mais se nota quando falta: sem ela um
+ * `TcxPageControl` fica com a largura que o ancestral gravou, dentro de um item largo.
+ */
+function estica(valor: string, eixoHorizontal: boolean): boolean {
+  if (valor === 'ahclient' || valor === 'avclient') { return true; }
+  if (valor === '' || valor.endsWith('parentmanaged')) { return eixoHorizontal; }
+  return false;
+}
+
+function ehClient(valor: string): boolean {
+  return valor === 'ahclient' || valor === 'avclient';
+}
+
+/** O controle que um item posiciona, se houver. */
+function controleDe(info: LayoutInfo): DfmNode | undefined {
+  const nome = txt(info.node, 'control', '');
+  return nome ? info.node.parent?.kids.find(k => k.name === nome) : undefined;
+}
+
+/**
+ * Tamanho do controle dentro do item, sem o rótulo.
+ *
+ * `ControlOptions.OriginalWidth/Height` é o que o designer gravou e o que o dx restaura; o
+ * tamanho do próprio controle só entra quando o item não gravou nada.
+ */
+function tamanhoDoControle(info: LayoutInfo, reg: Registry): { w: number; h: number } {
+  const n = info.node;
+  const ctl = controleDe(info);
+  let w = num(n, 'controloptions.originalwidth');
+  let h = num(n, 'controloptions.originalheight');
+  if (ctl) {
+    const [cw, ch] = sizeOf(ctl, reg);
+    return { w: w || cw || 120, h: h || ch || 21 };
+  }
+  // separador, rótulo solto, item de imagem
+  w = w || 60;
+  h = h || (/separator/i.test(n.cls) ? 6 : 15);
+  return { w, h };
+}
+
+/** Tamanho que um item pede, antes de crescer ou dividir espaço. */
+function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
+  if (info.group) {
+    const [cap] = layoutCaption(info.node);
+    const moldura = flag(info.node, 'showborder') !== false && !!cap;
+    if (ehTabbed(info)) {
+      const p = info.kids.map(k => pedido(k, reg));
+      return {
+        w: Math.max(0, ...p.map(x => x.w)),
+        h: Math.max(0, ...p.map(x => x.h)) + ALTO_ABA,
+      };
+    }
+    const horiz = ehHorizontal(info);
+    let w = 0;
+    let h = 0;
+    for (const k of info.kids) {
+      const p = pedido(k, reg);
+      if (horiz) { w += p.w + GAP; h = Math.max(h, p.h); }
+      else { h += p.h + GAP; w = Math.max(w, p.w); }
+    }
+    if (info.kids.length) { if (horiz) { w -= GAP; } else { h -= GAP; } }
+    if (moldura) { w += RECUO_GRUPO * 2; h += RECUO_GRUPO * 2 + ALTO_CAPTION; }
+    return { w, h };
+  }
+
+  const n = info.node;
+  const ctl = tamanhoDoControle(info, reg);
+  const [cap, pos] = layoutCaption(n);
+  if (!cap) { return ctl; }
+  return pos === 'top' || pos === 'bottom'
+    ? { w: ctl.w, h: ctl.h + ALTO_CAPTION }
+    : { w: ctl.w + cap.length * 6 + LARGURA_CAPTION, h: ctl.h };
+}
+
+/**
+ * Distribui `disponivel` entre os filhos na direção principal.
+ *
+ * Quem é `client` fica com o que sobrou depois dos tamanhos pedidos — inclusive quando isso
+ * é MENOS do que ele pediria: `client` quer dizer "o que sobrar", nos dois sentidos. Cobrir o
+ * caso só para cima deixava o grupo de nome/endereço do CadastroMan com os 647px que a soma dos
+ * filhos pedia, ao lado de uma imagem de 422, num container de 848 — 224px para fora.
+ *
+ * Quando não há nenhum `client` e falta espaço, aí sim ninguém encolhe: transbordar é visível
+ * e diz a verdade, encolher em silêncio esconde um layout que também estoura no Delphi.
+ */
+function distribuir(
+  filhos: LayoutInfo[], pedidos: { w: number; h: number }[], disponivel: number,
+  horiz: boolean,
+): number[] {
+  const eixo = (p: { w: number; h: number }): number => (horiz ? p.w : p.h);
+  const clientes: number[] = [];
+  let fixo = 0;
+  filhos.forEach((f, i) => {
+    const a = alinhamento(f.node);
+    if (ehClient(horiz ? a.h : a.v)) { clientes.push(i); }
+    else { fixo += eixo(pedidos[i]); }
+  });
+  const gaps = Math.max(0, filhos.length - 1) * GAP;
+  const sobra = Math.max(0, disponivel - fixo - gaps);
+
+  /*
+   * Com mais de um `client`, o rateio é proporcional ao que cada um pediu — não em partes
+   * iguais. É o que se vê no CadastroMan: o bloco de nome/endereço e a moldura da foto são
+   * ambos `ahClient`, e meio a meio daria uma foto do tamanho do formulário inteiro.
+   */
+  const total = clientes.reduce((acc, i) => acc + eixo(pedidos[i]), 0);
+  const fatias = new Map<number, number>();
+  let dado = 0;
+  clientes.forEach((i, pos) => {
+    const parte = pos === clientes.length - 1 ? sobra - dado
+      : total ? Math.round((sobra * eixo(pedidos[i])) / total)
+        : Math.floor(sobra / clientes.length);
+    fatias.set(i, Math.max(0, parte));
+    dado += parte;
+  });
+
+  return filhos.map((f, i) => (fatias.has(i) ? fatias.get(i)! : eixo(pedidos[i])));
+}
+
+/** Percorre a árvore e devolve o retângulo de tudo, já resolvido. */
+export function medirLayout(
+  info: LayoutInfo, reg: Registry, area: Rect,
+): Medida {
+  const medida: Medida = { rect: area, info, filhos: [] };
+
+  if (!info.group) {
+    const ctl = controleDe(info);
+    const [cap, pos] = layoutCaption(info.node);
+    let dentro = { ...area, x: 0, y: 0 };
+    if (cap) {
+      const largura = cap.length * 6 + LARGURA_CAPTION;
+      if (pos === 'top') {
+        medida.caption = { texto: cap, pos, rect: { x: 0, y: 0, w: area.w, h: ALTO_CAPTION } };
+        dentro = { x: 0, y: ALTO_CAPTION, w: area.w, h: Math.max(0, area.h - ALTO_CAPTION) };
+      } else if (pos === 'bottom') {
+        medida.caption = {
+          texto: cap, pos,
+          rect: { x: 0, y: area.h - ALTO_CAPTION, w: area.w, h: ALTO_CAPTION },
+        };
+        dentro = { x: 0, y: 0, w: area.w, h: Math.max(0, area.h - ALTO_CAPTION) };
+      } else if (pos === 'right') {
+        medida.caption = { texto: cap, pos, rect: { x: area.w - largura, y: 0, w: largura, h: area.h } };
+        dentro = { x: 0, y: 0, w: Math.max(0, area.w - largura), h: area.h };
+      } else {
+        medida.caption = { texto: cap, pos: 'left', rect: { x: 0, y: 0, w: largura, h: area.h } };
+        dentro = { x: largura, y: 0, w: Math.max(0, area.w - largura), h: area.h };
+      }
+    }
+    if (ctl) {
+      const p = tamanhoDoControle(info, reg);
+      const a = alinhamento(info.node);
+      /*
+       * No eixo em que o item estica, o controle acompanha. No outro, ele fica com o tamanho
+       * gravado — inclusive quando o item ficou menor, e aí transborda de propósito. Cortar
+       * para caber é o que serrava os botões de OK e Cancelar ao meio: some 6px de um botão
+       * de 25 e nada na tela diz que o layout não coube.
+       */
+      const w = estica(a.h, true) || ehClient(a.h) ? dentro.w : p.w;
+      const h = ehClient(a.v) ? dentro.h : p.h;
+      const x = a.h === 'ahright' ? dentro.x + dentro.w - w
+        : a.h === 'ahcenter' ? dentro.x + Math.max(0, (dentro.w - w) / 2) : dentro.x;
+      const y = a.v === 'avbottom' ? dentro.y + dentro.h - h
+        : a.v === 'avcenter' ? dentro.y + Math.max(0, (dentro.h - h) / 2) : dentro.y;
+      medida.controle = { node: ctl, rect: { x: Math.round(x), y: Math.round(y), w, h } };
+    }
+    return medida;
+  }
+
+  if (ehTabbed(info)) {
+    medida.abas = info.kids.map(k => layoutCaption(k.node)[0] || k.node.name);
+    const pagina: Rect = {
+      x: 0, y: ALTO_ABA, w: area.w, h: Math.max(0, area.h - ALTO_ABA),
+    };
+    for (const k of info.kids) { medida.filhos.push(medirLayout(k, reg, pagina)); }
+    return medida;
+  }
+
+  const horiz = ehHorizontal(info);
+  const [cap] = layoutCaption(info.node);
+  const moldura = flag(info.node, 'showborder') !== false && !!cap;
+  const pad = moldura ? RECUO_GRUPO : 0;
+  const topo = moldura ? ALTO_CAPTION : 0;
+  const interna = {
+    x: pad, y: pad + topo,
+    w: Math.max(0, area.w - pad * 2),
+    h: Math.max(0, area.h - pad * 2 - topo),
+  };
+
+  const pedidos = info.kids.map(k => pedido(k, reg));
+  const principal = distribuir(info.kids, pedidos, horiz ? interna.w : interna.h, horiz);
+
+  /*
+   * No eixo principal o grupo tem duas âncoras, não uma: `ahLeft`/`avTop` empacotam a partir
+   * do início, `ahRight`/`avBottom` a partir do fim, e o que sobra no meio fica vazio (ou vai
+   * para quem é `client`). É o que põe OK e Cancelar no canto direito do rodapé sem nenhum
+   * espaçador — empilhar tudo da esquerda jogava os dois 38px para fora do grupo.
+   */
+  const inicio = horiz ? interna.x : interna.y;
+  const offsets: number[] = new Array(info.kids.length);
+  let fimCursor = inicio + (horiz ? interna.w : interna.h);
+  for (let i = info.kids.length - 1; i >= 0; i--) {
+    const a = alinhamento(info.kids[i].node);
+    const principalDele = horiz ? a.h : a.v;
+    if (principalDele !== 'ahright' && principalDele !== 'avbottom') { continue; }
+    fimCursor -= principal[i];
+    offsets[i] = fimCursor;
+    fimCursor -= GAP;
+  }
+  let cursor = inicio;
+  info.kids.forEach((k, i) => {
+    if (offsets[i] !== undefined) { return; }
+    offsets[i] = cursor;
+    cursor += principal[i] + GAP;
+  });
+
+  info.kids.forEach((k, i) => {
+    const a = alinhamento(k.node);
+    const cruzado = horiz ? a.v : a.h;
+    const cruzadoTotal = horiz ? interna.h : interna.w;
+    const pedidoCruzado = horiz ? pedidos[i].h : pedidos[i].w;
+    const tamCruzado = estica(cruzado, !horiz) ? cruzadoTotal
+      : Math.min(pedidoCruzado, cruzadoTotal) || pedidoCruzado;
+    const base = horiz ? interna.y : interna.x;
+    const offCruzado = cruzado === 'ahright' || cruzado === 'avbottom'
+      ? base + cruzadoTotal - tamCruzado
+      : cruzado === 'ahcenter' || cruzado === 'avcenter'
+        ? base + Math.max(0, Math.round((cruzadoTotal - tamCruzado) / 2))
+        : base;
+
+    const filhoArea: Rect = horiz
+      ? { x: offsets[i], y: offCruzado, w: principal[i], h: tamCruzado }
+      : { x: offCruzado, y: offsets[i], w: tamCruzado, h: principal[i] };
+    medida.filhos.push(medirLayout(k, reg, filhoArea));
+  });
+  return medida;
+}

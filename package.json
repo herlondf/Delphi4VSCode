@@ -1,0 +1,510 @@
+{
+  "name": "delphi4vscode",
+  "displayName": "Delphi4VSCode",
+  "description": "Delphi no VS Code: designer de forms, Code Insight do compilador, build e projeto — sem abrir a IDE.",
+  "version": "0.15.0",
+  "publisher": "app",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "delphi4vscode.form",
+        "displayName": "Delphi Form",
+        "selector": [
+          {
+            "filenamePattern": "*.dfm"
+          },
+          {
+            "filenamePattern": "*.fmx"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "languages": [
+      {
+        "id": "dfm",
+        "extensions": [
+          ".dfm",
+          ".fmx"
+        ],
+        "aliases": [
+          "Delphi Form"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "pascal",
+        "extensions": [
+          ".pas",
+          ".dpr",
+          ".dpk",
+          ".inc"
+        ],
+        "aliases": [
+          "Delphi",
+          "Object Pascal",
+          "Pascal"
+        ],
+        "configuration": "./pascal-configuration.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "delphi4vscode.reindex",
+        "title": "Delphi Form: reindexar classes dos .pas",
+        "category": "Delphi Form"
+      },
+      {
+        "command": "delphi4vscode.openAsText",
+        "title": "Delphi Form: abrir como texto",
+        "category": "Delphi Form"
+      },
+      {
+        "command": "delphi4vscode.toggleLayout",
+        "title": "Delphi Form: alternar layout calculado / coordenadas gravadas",
+        "category": "Delphi Form"
+      },
+      {
+        "command": "delphi4vscode.openAsDesigner",
+        "title": "Delphi Form: abrir no designer",
+        "category": "Delphi Form",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "delphi4vscode.selecionarProjeto",
+        "title": "Delphi: escolher projeto ativo (.dproj)",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.configurarBuild",
+        "title": "Delphi: configuração e plataforma de build",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.build",
+        "title": "Delphi: compilar (Compile, Ctrl+F9)",
+        "category": "Delphi",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "delphi4vscode.rebuild",
+        "title": "Delphi: recompilar tudo (Build, Shift+F9)",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.clean",
+        "title": "Delphi: limpar",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.ativarProjeto",
+        "title": "Delphi: ativar este projeto",
+        "category": "Delphi",
+        "icon": "$(check)"
+      },
+      {
+        "command": "delphi4vscode.atualizarProjetos",
+        "title": "Delphi: atualizar lista de projetos",
+        "category": "Delphi",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "delphi4vscode.novoForm",
+        "title": "Delphi: novo Form",
+        "category": "Delphi",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "delphi4vscode.novoFrame",
+        "title": "Delphi: novo Frame",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.novoDataModule",
+        "title": "Delphi: novo Data Module",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.salvarBinario",
+        "title": "Delphi Form: gravar cópia em binário",
+        "category": "Delphi Form"
+      },
+      {
+        "command": "delphi4vscode.usarScriptBuild",
+        "title": "Delphi: usar o script de build do projeto",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.abrirLog",
+        "title": "Delphi: abrir log de diagnóstico",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.cleanBuild",
+        "title": "Delphi: limpar e reconstruir (Clean + Build)",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.compilarComo",
+        "title": "Delphi: compilar como... (escolher Debug/Release)",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.verificarProjeto",
+        "title": "Delphi: verificar estrutura do projeto",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.resumoProjeto",
+        "title": "Delphi: resumo do projeto",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.rodar",
+        "title": "Delphi: executar o programa compilado",
+        "category": "Delphi",
+        "icon": "$(play)"
+      },
+      {
+        "command": "delphi4vscode.compilarERodar",
+        "title": "Delphi: compilar e executar",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.acrescentarUnit",
+        "title": "Delphi: acrescentar esta unit ao projeto",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.removerUnit",
+        "title": "Delphi: remover unit do projeto",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.converterParaTexto",
+        "title": "Delphi Form: converter binário para texto (destrava a edição)",
+        "category": "Delphi Form"
+      },
+      {
+        "command": "delphi4vscode.lspRecarregar",
+        "title": "Delphi: recarregar o projeto no Code Insight"
+      },
+      {
+        "command": "delphi4vscode.novaUnit",
+        "title": "Delphi: nova Unit"
+      },
+      {
+        "command": "delphi4vscode.novoProjeto",
+        "title": "Delphi: novo projeto"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "delphi4vscode.openAsText",
+          "when": "activeCustomEditorId == delphi4vscode.form",
+          "group": "navigation@1"
+        },
+        {
+          "command": "delphi4vscode.toggleLayout",
+          "when": "activeCustomEditorId == delphi4vscode.form",
+          "group": "navigation@2"
+        },
+        {
+          "command": "delphi4vscode.openAsDesigner",
+          "when": "resourceExtname == .dfm && !activeCustomEditorId",
+          "group": "navigation@1"
+        },
+        {
+          "command": "delphi4vscode.build",
+          "when": "resourceExtname in delphi4vscode.delphiExts",
+          "group": "navigation@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "delphi4vscode.novoForm",
+          "when": "view == delphi4vscode.projetos",
+          "group": "navigation@0"
+        },
+        {
+          "command": "delphi4vscode.atualizarProjetos",
+          "when": "view == delphi4vscode.projetos",
+          "group": "navigation@1"
+        },
+        {
+          "command": "delphi4vscode.build",
+          "when": "view == delphi4vscode.projetos",
+          "group": "navigation@2"
+        },
+        {
+          "command": "delphi4vscode.rodar",
+          "when": "view == delphi4vscode.projetos",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "delphi4vscode.ativarProjeto",
+          "when": "view == delphi4vscode.projetos && viewItem == projeto",
+          "group": "inline"
+        },
+        {
+          "command": "delphi4vscode.build",
+          "when": "view == delphi4vscode.projetos && viewItem == projetoAtivo",
+          "group": "inline"
+        },
+        {
+          "command": "delphi4vscode.configurarBuild",
+          "when": "view == delphi4vscode.projetos && viewItem == projetoAtivo",
+          "group": "1_build"
+        },
+        {
+          "command": "delphi4vscode.rebuild",
+          "when": "view == delphi4vscode.projetos && viewItem == projetoAtivo",
+          "group": "1_build"
+        },
+        {
+          "command": "delphi4vscode.clean",
+          "when": "view == delphi4vscode.projetos && viewItem == projetoAtivo",
+          "group": "1_build"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Delphi Form Designer",
+      "properties": {
+        "delphi4vscode.sourcePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Pastas de .pas a indexar **além** das que a extensão descobre sozinha: o search path do .dproj ativo, o Browsing/Library Path do Delphi e a pasta `source` da instalação. Deixe vazio para usar só a descoberta automática."
+        },
+        "delphi4vscode.validate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reportar problemas do form (componente fora do pai, TabOrder repetido, nome duplicado) no painel Problems."
+        },
+        "delphi4vscode.bdsBinPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Pasta `bin` da instalação do Delphi (a que tem o `rsvars.bat`). Vazio procura sozinho a versão mais recente instalada."
+        },
+        "delphi4vscode.buildConfig": {
+          "type": "string",
+          "default": "Debug",
+          "description": "Configuração usada ao compilar (Debug, Release...)."
+        },
+        "delphi4vscode.buildPlatform": {
+          "type": "string",
+          "default": "Win32",
+          "description": "Plataforma usada ao compilar (Win32, Win64, Linux64...)."
+        },
+        "delphi4vscode.errorLens.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mostrar erros e avisos na própria linha do código."
+        },
+        "delphi4vscode.errorLens.languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "pascal",
+            "dfm"
+          ],
+          "description": "Linguagens em que a mensagem aparece inline."
+        },
+        "delphi4vscode.errorLens.maxLength": {
+          "type": "number",
+          "default": 160,
+          "description": "Tamanho máximo da mensagem inline antes de cortar."
+        },
+        "delphi4vscode.validatePascal": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Verificar o `.pas` contra o `.dfm` irmão: componente sem campo published, handler inexistente, método sem implementação, unit duplicada no uses."
+        },
+        "delphi4vscode.validarPropriedades": {
+          "type": "boolean",
+          "default": true,
+          "description": "Avisar quando o .dfm grava uma propriedade que a classe não declara. Exige o índice das fontes (delphi4vscode.sourcePaths)."
+        },
+        "delphi4vscode.buildScript": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Linha de comando do script de build do próprio projeto. Quando preenchida, substitui o rsvars+msbuild — necessário em projetos que carregam a própria toolchain no repositório. Marcadores: `${project}`, `${projectPath}`, `${target}`, `${config}`, `${platform}`, `${workspaceFolder}`."
+        },
+        "delphi4vscode.buildScriptCwd": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Diretório de onde rodar `delphi4vscode.buildScript`. Vazio usa a raiz do workspace. Aceita os mesmos marcadores."
+        },
+        "delphi4vscode.buildVerbosity": {
+          "type": "string",
+          "enum": [
+            "quiet",
+            "minimal",
+            "normal",
+            "detailed",
+            "diagnostic"
+          ],
+          "default": "minimal",
+          "enumDescriptions": [
+            "só o resultado",
+            "os erros e o resumo (padrão)",
+            "cada projeto compilado",
+            "a linha de comando do dcc32 e cada unit",
+            "tudo, inclusive a avaliação de propriedades do MSBuild"
+          ],
+          "markdownDescription": "Nível de detalhe do build (`/v:` do MSBuild). `detailed` mostra a linha do dcc32 e o search path — é o que se olha quando uma unit não é encontrada."
+        },
+        "delphi4vscode.lerPacotes": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Completar o índice lendo o RTTI dos pacotes compilados (.bpl). Serve para componente que vem sem fonte. Roda em segundo plano depois do índice de fontes."
+        },
+        "delphi4vscode.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Usar o DelphiLSP.exe da instalação do Delphi para completar código, hover e ir para a definição. Desligado, vale o índice próprio da extensão."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "delphi4vscode.openAsText",
+        "key": "alt+f12",
+        "when": "activeCustomEditorId == delphi4vscode.form"
+      },
+      {
+        "command": "delphi4vscode.openAsDesigner",
+        "key": "alt+f12",
+        "when": "resourceExtname == .dfm && editorTextFocus"
+      },
+      {
+        "command": "delphi4vscode.build",
+        "key": "ctrl+f9",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "delphi4vscode.rebuild",
+        "key": "shift+f9",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "delphi4vscode.cleanBuild",
+        "key": "ctrl+shift+f9",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "delphi4vscode.rodar",
+        "key": "f9",
+        "when": "workspaceFolderCount > 0 && !inDebugMode"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dfm",
+        "scopeName": "source.dfm",
+        "path": "./syntaxes/dfm.tmLanguage.json"
+      },
+      {
+        "language": "pascal",
+        "scopeName": "source.pascal",
+        "path": "./syntaxes/pascal.tmLanguage.json"
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "delphi4vscode-dcc",
+        "owner": "delphi",
+        "fileLocation": [
+          "autoDetect",
+          "${workspaceFolder}"
+        ],
+        "pattern": [
+          {
+            "regexp": "^(.*?)\\((\\d+)\\)\\s+(Error|Fatal Error|Warning|Hint)\\s*:?\\s*(?:([A-Z]\\d{4})\\s+)?(.*)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "code": 4,
+            "message": 5
+          }
+        ]
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "delphi4vscode",
+        "required": [
+          "alvo"
+        ],
+        "properties": {
+          "alvo": {
+            "type": "string",
+            "description": "Build, Rebuild ou Clean"
+          }
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "delphi4vscode-delphi",
+          "title": "Delphi",
+          "icon": "media/delphi.svg"
+        }
+      ]
+    },
+    "views": {
+      "delphi4vscode-delphi": [
+        {
+          "id": "delphi4vscode.projetos",
+          "name": "Projetos",
+          "icon": "media/delphi.svg",
+          "contextualTitle": "Projetos Delphi"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -w -p .",
+    "test": "tsc -p . && node -e \"require('fs').copyFileSync('src/test/vscode-falso.js','out/test/vscode-falso.js')\" && node --test \"out/test/*.test.js\"",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.4.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
