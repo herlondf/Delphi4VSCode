@@ -74,13 +74,35 @@ Gerando esse arquivo e falando o protocolo do cliente oficial
   `System.Classes.pas:7483`.
 - ✅ **O compilador resolve símbolos de verdade.** Plantando um identificador inexistente num
   método, o servidor devolve exatamente 1 diagnóstico. Não é só análise sintática.
-- ⚠️ **Uma unit do `uses` mata o completar: `Vcl.Graphics`.** Bissecção sobre as 41 units do
-  `uses` de um form real: com as 5 primeiras (`Winapi.Windows`, `Winapi.Messages`,
-  `System.SysUtils`, `System.Variants`, `System.Classes`) o completar devolve 108 itens; ao
-  acrescentar `Vcl.Graphics` cai para 0, com `Kibitz result: kkError` no log. Quatro hipóteses
-  foram testadas e **descartadas**: defines contraditórios (`RELEASE` e `DEBUG` juntos, que o
-  `.dproj` do projeto de teste de fato define), os caminhos `-O`/`-R`, o Browsing Path dentro do `-U`, e
-  os caminhos de saída e de pacotes (`-NU`, `-E`, `-LE`, `-LN`, `-NB`). Segue em aberto.
+- ✅ **Completion no código real do projeto de teste.** Em `CadastroView.pas`, `Dados.`
+  devolve os 7 campos de `TDadosCadastro` (`ItemID`, `RegistroID`, `Valor`, `Emissao`,
+  `Descricao`, `Centro`, `GerarLancamento`) — um record declarado em **outra** unit do
+  projeto — e o hover leva a `BaseDadosClient.pas:121`.
+
+### 1.2 O detalhe que custou a investigação inteira: `-LU`
+
+Com `-LU` sem lista de pacotes — ou sem `-LU` —, o servidor sobe, o compilador **roda**, o
+Error Insight funciona e o Ctrl+clique funciona. Só o completar devolve `null`, e só em
+arquivo que use uma unit `Vcl.*`, com `Kibitz result: kkError` no log.
+
+Como foi achado, por bissecção sobre as 41 units do `uses` de um form real:
+
+| Caso | Itens completados |
+|---|---|
+| 5 units de `System`/`Winapi` | 108 |
+| \+ `Vcl.Graphics` | 0 |
+| `Vcl.Controls` sozinha, `Vcl.Forms` sozinha | 0 |
+| `System.UITypes`, `Winapi.Windows`, `System.SysUtils` sozinhas | 108 |
+| `Vcl.Graphics` com `-LUrtl;vcl` | **108** |
+
+Hipóteses testadas e descartadas antes de chegar lá: defines contraditórios (`RELEASE` e
+`DEBUG` juntos, que o `.dproj` do projeto de teste de fato define), `-O`/`-R`, o Browsing Path dentro do
+`-U`, os caminhos de saída e de pacotes (`-NU`, `-E`, `-LE`, `-LN`, `-NB`), só a pasta de
+DCUs debug, só a de release, `--no-config`, `-Q`, `-TX.exe` e `-V -VN -VR`.
+
+A lista sai do `DCC_UsePackage` do `.dproj` (199 pacotes no App), com `rtl` e `vcl`
+somados sempre: projeto que não usa pacotes em runtime não declara nenhum, e o kibitz ainda
+assim precisa saber de onde vêm os símbolos da VCL.
 
 > Erro meu que atrasou isto: a primeira bissecção calculou a linha do alvo no *array* antes de
 > juntar o bloco `uses` multi-linha, e acusou `Winapi.Messages`. O índice no array só coincide
@@ -101,11 +123,11 @@ Não estão na lista de capacidades, e portanto continuam sendo nossos:
 
 ---
 
-## 2. Onde estamos hoje (v0.15.0)
+## 2. Onde estamos hoje (v0.16.0)
 
 Medido, não estimado:
 
-- **~13.900 linhas** de TypeScript, **265 testes** passando.
+- **~14.800 linhas** de TypeScript, **272 testes** passando, sob git desde este trabalho.
 - Índice de **29.177 classes** varrendo 6 raízes em 3,7 s; descoberta de fontes automática
   (Library Path + Browsing Path + `.dproj` + workspace).
 - Leitura de **312 BPLs** por RTTI → 17.979 classes, 1.879 com propriedades. É o que
@@ -123,10 +145,10 @@ Medido, não estimado:
 
 | Onde | Problema |
 |---|---|
-| `pascalNav.ts` `unitDe()` | Varre as 29 mil classes a cada Ctrl+clique. O índice não guarda unit→arquivo, só classe→arquivo, então unit sem classe (`System.SysUtils`) nunca é encontrada. |
+| ~~`pascalNav.ts` `unitDe()`~~ | **Resolvido.** O `Registry` guarda unit→arquivo e aceita o nome curto de unit com namespace. |
 | `registry.ts` | Não indexa métodos, funções livres, constantes nem tipos — só classes e propriedades. |
 | `pascal.ts` | Regex por linha. Não entende `with`, genéricos, sobrecarga, escopo. |
-| Repo | **Não é repositório git** — 13 mil linhas sem controle de versão. Além disso, 14 `.vsix` e `diag.js`/`diag2.js` soltos na raiz. |
+| ~~Repo~~ | **Resolvido.** Repositório iniciado, 90 arquivos versionados; `.vsix`, `out/` e os scripts de diagnóstico ficaram de fora pelo `.gitignore`. |
 
 ---
 
@@ -142,7 +164,7 @@ duas ativas ao mesmo tempo, brigando pelo editor de `.dfm`.
 
 Falta: mover os scripts soltos para `sandbox/` e pôr o repositório sob git.
 
-### Fase 1 — DelphiLSP embutido — **em pé, com uma pendência**
+### Fase 1 — DelphiLSP embutido — **feita**
 
 1. ✅ `src/lsp/config.ts` — gera o `.delphilsp.json` do `.dproj` ativo, reaproveitando
    `sources.ts`. Só reescreve quando o conteúdo muda: regravar igual faria o servidor
@@ -151,8 +173,7 @@ Falta: mover os scripts soltos para `sandbox/` e pôr o repositório sob git.
    instalação escolhida em `bdsBinPath`. Regera e reaponta quando o `.dproj` é salvo.
    `src/lsp/estado.ts` existe separado porque `vscode-languageclient` só carrega dentro do
    VS Code e derrubava os testes de ativação.
-3. ⚠️ Fechar o `kkError` do `Vcl.Graphics` (§1.1) — é o que separa "funciona no exemplo" de
-   "funciona no projeto de teste".
+3. ✅ O `kkError` era o `-LU` sem pacotes (§1.2). Completa no projeto de teste.
 4. **Convivência**: o LSP tem prioridade; o índice atual vira fallback para o que o LSP não
    faz — `references`, `workspaceSymbol`, e completion quando o servidor cala. Isso importa:
    o LSP só responde bem para arquivos que pertencem ao projeto ativo, e o índice responde
@@ -179,12 +200,12 @@ símbolo, Error Insight enquanto digita.
 
 ### Fase 3 — Codificação fluente
 
-- **Formatação** via `Formatter.exe` — `DocumentFormattingEditProvider` chamando o binário
-  com o `Formatter.config` do usuário. Isso **substitui** o formatador próprio, que foi
-  cortado por alterar 55,7% das linhas em 150 `.pas` reais (ver
-  `src/dfm/formatar-decisao.md`).
-- **Ctrl+clique em unit do `uses`** — pelo LSP; e um mapa unit→arquivo no índice como
-  fallback, que também corrige a varredura O(29k) de hoje.
+- ✅ **Formatação** via `Formatter.exe`, com o `Formatter.config` do usuário. Substitui o
+  formatador próprio, cortado por alterar 55,7% das linhas em 150 `.pas` reais. O arquivo
+  temporário vai **com BOM**: sem ele o `Formatter.exe` lê como ANSI e come todo acento de
+  comentário e de string — num código em português isso é a maioria dos arquivos.
+- ✅ **Ctrl+clique em unit do `uses`** — pelo LSP, com o mapa unit→arquivo do índice como
+  fallback.
 - **Ctrl+Shift+↑/↓** entre declaração e implementação (já existe, falta o atalho).
 - **Class Completion** — o `Ctrl+Shift+C` do Delphi: declarei o método na classe, gerar o
   corpo em `implementation` (e o inverso).
