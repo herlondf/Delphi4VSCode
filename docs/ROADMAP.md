@@ -123,11 +123,11 @@ Não estão na lista de capacidades, e portanto continuam sendo nossos:
 
 ---
 
-## 2. Onde estamos hoje (v0.16.0)
+## 2. Onde estamos hoje (v0.17.0)
 
 Medido, não estimado:
 
-- **~14.800 linhas** de TypeScript, **272 testes** passando, sob git desde este trabalho.
+- **~15.300 linhas** de TypeScript, **290 testes** passando, sob git desde este trabalho.
 - Índice de **29.177 classes** varrendo 6 raízes em 3,7 s; descoberta de fontes automática
   (Library Path + Browsing Path + `.dproj` + workspace).
 - Leitura de **312 BPLs** por RTTI → 17.979 classes, 1.879 com propriedades. É o que
@@ -207,10 +207,26 @@ símbolo, Error Insight enquanto digita.
 - ✅ **Ctrl+clique em unit do `uses`** — pelo LSP, com o mapa unit→arquivo do índice como
   fallback.
 - **Ctrl+Shift+↑/↓** entre declaração e implementação (já existe, falta o atalho).
-- **Class Completion** — o `Ctrl+Shift+C` do Delphi: declarei o método na classe, gerar o
-  corpo em `implementation` (e o inverso).
-- **Adicionar ao `uses`** — quick fix no `E2003 Undeclared identifier` usando o índice para
-  saber em que unit o símbolo mora.
+- ✅ **Class Completion** (`Ctrl+Shift+C`) — `src/dfm/classcomp.ts`. O corpo gerado foi
+  **compilado com o `dcc32`** antes de virar teste, e as regras de diretiva saíram de
+  perguntar ao compilador caso a caso, não da documentação:
+
+  | Diretiva | No corpo |
+  |---|---|
+  | `stdcall` `cdecl` `safecall` `register` `pascal` | repete |
+  | `overload` `inline` | `E1030` |
+  | `virtual` `reintroduce` `static` | `E2070` |
+  | `override` | `E2137` |
+
+  O palpite óbvio — que `overload` se repete — é justamente o errado.
+
+  Varrido contra os **810 `.pas` do projeto de teste**: 3 arquivos acusavam pendência num código que
+  compila, e os dois defeitos por trás disso foram corrigidos (`TFooClass = class of TFoo`
+  entrava na pilha como classe com corpo; implementação com o nome na linha seguinte à
+  palavra-chave não era reconhecida). Depois: **0 falso-positivo**.
+- ✅ **Adicionar ao `uses`** — quick fix no `E2003 Undeclared identifier`, pelo índice. Entra
+  no `uses` da `implementation` quando existe: pôr tudo na `interface` cria dependência
+  circular, que no Delphi é erro de compilação e não aviso.
 - **Outline / breadcrumbs** — `documentSymbol` do LSP.
 - **Snippets** de Object Pascal (`try..finally`, `for..in`, cabeçalho de classe).
 

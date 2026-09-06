@@ -54,6 +54,7 @@ const vscode = {
     asRelativePath: p => p,
   },
   languages: {
+    registerCodeActionsProvider: () => ({ dispose: noop }),
     createDiagnosticCollection: () => ({ set: noop, delete: noop, clear: noop, dispose: noop }),
     registerDocumentSymbolProvider: () => disp,
     registerCodeLensProvider: () => disp,
@@ -95,7 +96,9 @@ const vscode = {
   ShellQuoting: { Strong: 1 },
   TaskScope: { Workspace: 1 }, TaskGroup: { Build: 1, Clean: 2 },
   TaskRevealKind: { Always: 1 }, TaskPanelKind: { Shared: 1 },
-  TextEditorRevealType: { InCenter: 2 },
+  TextEditorRevealType: { InCenter: 2, InCenterIfOutsideViewport: 2 },
+  CodeAction: class { constructor(titulo, tipo) { this.title = titulo; this.kind = tipo; } },
+  CodeActionKind: { QuickFix: 'quickfix', Refactor: 'refactor' },
   ViewColumn: { Beside: -2 }, EndOfLine: { LF: 1, CRLF: 2 },
   ConfigurationTarget: { Workspace: 2 },
   DecorationRangeBehavior: { ClosedClosed: 1 },

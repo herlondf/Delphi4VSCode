@@ -2,7 +2,7 @@
   "name": "delphi4vscode",
   "displayName": "Delphi4VSCode",
   "description": "Delphi no VS Code: designer de forms, Code Insight do compilador, build e projeto — sem abrir a IDE.",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "publisher": "app",
   "license": "MIT",
   "engines": {
@@ -210,6 +210,10 @@
       {
         "command": "delphi4vscode.novoProjeto",
         "title": "Delphi: novo projeto"
+      },
+      {
+        "command": "delphi4vscode.classCompletion",
+        "title": "Delphi: completar classe (gerar corpo dos métodos)"
       }
     ],
     "menus": {
@@ -418,6 +422,11 @@
         "command": "delphi4vscode.rodar",
         "key": "f9",
         "when": "workspaceFolderCount > 0 && !inDebugMode"
+      },
+      {
+        "command": "delphi4vscode.classCompletion",
+        "key": "ctrl+shift+c",
+        "when": "editorTextFocus && resourceExtname =~ /\\.(pas|dpr|dpk|inc)/"
       }
     ],
     "grammars": [
