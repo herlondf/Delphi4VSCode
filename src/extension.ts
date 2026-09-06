@@ -23,6 +23,7 @@ import { registrarProjetoCmd } from './projetoCmd';
 import { registrarExecutar } from './executar';
 import { registrarLsp } from './lsp/cliente';
 import { registrarNovoProjeto } from './novoProjetoCmd';
+import { registrarFormatador } from './formatar';
 import { registrarNovoForm } from './newForm';
 import { Descoberta, descobrirFontes } from './dfm/sources';
 import { lerPacotes, pacotesConhecidos } from './dfm/bpl';
@@ -148,6 +149,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
    * continua atendendo — é por isso que os dois convivem.
    */
   void registrarLsp(ctx, build, canalLsp(ctx));
+  registrarFormatador(ctx, canalLsp(ctx));
   vigiarFontes(ctx);
   sincronizarSelecao(ctx, provider);
   void loadIndex(ctx);

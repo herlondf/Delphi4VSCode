@@ -25,6 +25,7 @@ function projetoFalso(): { dir: string; dproj: string } {
     '<DCC_Namespace>Vcl;System;$(DCC_Namespace)</DCC_Namespace>',
     '<DCC_Define>MADEXCEPT;$(DCC_Define)</DCC_Define>',
     '<DCC_DcuOutput>dcu</DCC_DcuOutput>',
+    '<DCC_UsePackage>cxLibraryD12;dbrtl;$(DCC_UsePackage)</DCC_UsePackage>',
     '</PropertyGroup>', '</Project>',
   ].join('\n'), 'utf8');
   fs.writeFileSync(path.join(dir, 'Meu Projeto.dpr'), [
@@ -107,4 +108,22 @@ test('trocar a plataforma muda o arquivo, e portanto o que o servidor compila', 
   const a = montarConfig(opcoes(dproj)).settings.dccOptions;
   const b = montarConfig({ ...opcoes(dproj), plataforma: 'Win64' }).settings.dccOptions;
   assert.notEqual(a, b);
+});
+
+test('o -LU leva a lista de pacotes: sem ela o completar morre em qualquer unit Vcl', () => {
+  const { dproj } = projetoFalso();
+  const dcc = montarConfig(opcoes(dproj)).settings.dccOptions;
+  const lu = /-LU(\S*)/.exec(dcc)![1];
+  const pacotes = lu.split(';');
+  assert.ok(pacotes.includes('cxLibraryD12'), 'o que o .dproj declara tem de ir');
+  assert.ok(pacotes.includes('dbrtl'), lu);
+  /*
+   * `rtl` e `vcl` entram mesmo sem o projeto declarar. Medido contra o DelphiLSP: com `-LU`
+   * vazio, um `uses` com `Vcl.Graphics` faz o completar devolver 0 itens e `kkError` no log;
+   * nomeando os pacotes, volta a 108. Não é preferência, é requisito do servidor.
+   */
+  assert.ok(pacotes.includes('rtl'), lu);
+  assert.ok(pacotes.includes('vcl'), lu);
+  assert.ok(!lu.includes('$('), 'variável do MSBuild não pode virar nome de pacote');
+  assert.equal(new Set(pacotes).size, pacotes.length, 'pacote repetido');
 });

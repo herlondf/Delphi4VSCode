@@ -145,6 +145,24 @@ export function montarConfig(op: OpcoesLsp): ConfigLsp {
   const defines = lerTag(dproj, 'DCC_Define').map(s => s.trim())
     .filter(s => s && !/\$\(/.test(s));
 
+  /*
+   * A lista de pacotes é a diferença entre completar e não completar.
+   *
+   * Com `-LU` sem nome nenhum — ou sem `-LU` — o compilador roda, o Error Insight funciona e
+   * o Ctrl+clique funciona, mas o completar devolve `null` em qualquer arquivo que use uma
+   * unit `Vcl.*`, com `Kibitz result: kkError` no log. Medido: 5 units de `System`/`Winapi` no
+   * `uses` completam 108 membros; acrescentar `Vcl.Graphics` zera. Nomeando os pacotes,
+   * volta aos 108.
+   *
+   * `rtl` e `vcl` entram sempre: um projeto que não usa pacotes em runtime não declara
+   * nenhum, e ainda assim o kibitz precisa saber de onde vêm os símbolos da VCL.
+   */
+  const pacotes = [...new Set([
+    ...lerTag(dproj, 'DCC_UsePackage').map(p => p.trim())
+      .filter(p => p && !/\$\(/.test(p)),
+    'rtl', 'vcl',
+  ])];
+
   const dcuOut = pastas(lerTag(dproj, 'DCC_DcuOutput'), base, amb)[0]
     ?? path.join(base, plataforma, config);
   const exeOut = pastas(lerTag(dproj, 'DCC_ExeOutput'), base, amb)[0] ?? dcuOut;
@@ -164,7 +182,7 @@ export function montarConfig(op: OpcoesLsp): ConfigLsp {
     `-O${juntar(unitPaths)}`,
     `-R${juntar(unitPaths)}`,
     `-U${juntar([...unitPaths, dcp])}`,
-    '-V', '-VN', '-VR', '-LU',
+    '-V', '-VN', '-VR', `-LU${pacotes.join(';')}`,
   ].join(' ');
 
   const dpr = op.dproj.replace(/\.dproj$/i, '.dpr');

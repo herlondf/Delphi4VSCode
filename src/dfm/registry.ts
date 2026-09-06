@@ -127,6 +127,13 @@ export class Registry {
    * serve é `UI.Button`, que o RTTI traz junto.
    */
   private unitPascal = new Map<string, string>();
+  /*
+   * Nome da unit → arquivo. Existe separado de `units` (classe → arquivo) porque nem toda
+   * unit declara classe: `System.SysUtils` é só funções, e Ctrl+clique nela no `uses` não
+   * achava nada. Antes, procurar por unit varria as 29 mil classes a cada clique.
+   */
+  private arquivoPorUnit = new Map<string, string>();
+  private ranksUnit = new Map<string, number>();
   /** Nome do tipo de cada propriedade publicada, para resolver as enumerações depois. */
   private tipoDaProp = new Map<string, string>();
   /** Declarações de enumeração vistas nas fontes: `talign` -> ['alNone', 'alTop', ...]. */
@@ -172,6 +179,11 @@ export class Registry {
       return;
     }
     const rank = unitRank(name);
+    const unit = name.replace(/\.pas$/i, '').toLowerCase();
+    if (rank > (this.ranksUnit.get(unit) ?? 0)) {
+      this.ranksUnit.set(unit, rank);
+      this.arquivoPorUnit.set(unit, full);
+    }
     CLASS_DECL.lastIndex = 0;
     for (const m of src.matchAll(CLASS_DECL)) {
       const child = m[1].toLowerCase();
@@ -392,6 +404,7 @@ export class Registry {
       tipos: [...this.tipoDaProp],
       upas: [...this.unitPascal],
       decl: [...this.enumsDeclarados].map(([k, v]) => [k, v.join(',')]),
+      unitsArq: [...this.arquivoPorUnit],
     };
   }
 
@@ -420,6 +433,7 @@ export class Registry {
     }
     if (data?.tipos) { r.tipoDaProp = new Map(data.tipos); }
     if (data?.upas) { r.unitPascal = new Map(data.upas); }
+    if (data?.unitsArq) { r.arquivoPorUnit = new Map(data.unitsArq); }
     if (data?.decl) {
       r.enumsDeclarados = new Map(
         (data.decl as [string, string][]).map(([k, v]) => [k, v.split(',')]));
@@ -460,6 +474,29 @@ export class Registry {
    *
    * Do RTTI quando a classe veio de um pacote; do nome do arquivo quando veio de fonte.
    */
+  /**
+   * Arquivo de uma unit pelo nome, aceitando o nome curto de uma unit com namespace.
+   *
+   * `Vcl.Forms` acha direto; `Forms` acha porque o compilador também aceita o nome curto
+   * quando o namespace está no `-NS`. O nome completo tem prioridade: `Classes` sozinho não
+   * pode ganhar de `System.Classes` quando os dois existem.
+   */
+  arquivoDaUnit(nome: string): string | undefined {
+    const baixo = nome.toLowerCase();
+    const direto = this.arquivoPorUnit.get(baixo);
+    if (direto) { return direto; }
+    if (baixo.includes('.')) { return undefined; }
+    for (const [unit, arq] of this.arquivoPorUnit) {
+      if (unit.endsWith('.' + baixo)) { return arq; }
+    }
+    return undefined;
+  }
+
+  /** Quantas units o índice conhece — nem toda unit vira classe. */
+  get unitsIndexadas(): number {
+    return this.arquivoPorUnit.size;
+  }
+
   unitPascalDe(cls: string): string | undefined {
     const chave = cls.toLowerCase();
     const doRtti = this.unitPascal.get(chave);

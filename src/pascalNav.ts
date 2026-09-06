@@ -41,16 +41,9 @@ function declaracaoDe(reg: Registry, cls: string): vscode.Location | undefined {
   return new vscode.Location(vscode.Uri.file(arquivo), pos);
 }
 
-/** Arquivo de uma unit pelo nome, usando o índice de classes como mapa de arquivos. */
+/** Arquivo de uma unit pelo nome. O indice guarda isso direto desde o mapa unit->arquivo. */
 function unitDe(reg: Registry, nome: string): string | undefined {
-  const baixo = nome.toLowerCase();
-  for (const cls of reg.classes()) {
-    const arq = reg.unitOf(cls);
-    if (!arq) { continue; }
-    const base = arq.split(/[\\/]/).pop()?.replace(/\.pas$/i, '').toLowerCase();
-    if (base === baixo) { return arq; }
-  }
-  return undefined;
+  return reg.arquivoDaUnit(nome);
 }
 
 /** C01 — Ctrl+clique numa classe ou numa unit do `uses`. */
