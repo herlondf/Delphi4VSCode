@@ -162,6 +162,30 @@ export class BuildManager {
       `Projeto ativo: ${path.basename(fsPath)} — Ctrl+F9 compila.`);
   }
 
+  /**
+   * Devolve o projeto ativo, resolvendo um se não houver.
+   *
+   * Existe por causa de um defeito silencioso do rename: `workspaceState` é isolado por id de
+   * extensão, então ninguém herdou o projeto ativo do `dfmview`. Sem projeto, o Code Insight
+   * sobe, aponta para lugar nenhum e responde `null` a tudo — e nada na tela dizia por quê.
+   *
+   * Com um `.dproj` só no workspace não há o que perguntar. Com mais de um, quem escolhe é o
+   * usuário: adivinhar aqui já compilou o projeto errado nesta extensão.
+   */
+  async garantirProjeto(perguntar: boolean): Promise<ProjetoInfo | undefined> {
+    if (this.projeto) { return this.projeto; }
+    const achados = await vscode.workspace.findFiles(
+      '**/*.dproj', '**/{node_modules,__history,__recovery}/**', 50);
+    if (!achados.length) { return undefined; }
+    if (achados.length === 1) {
+      await this.ativar(achados[0].fsPath);
+      return this.projeto;
+    }
+    if (!perguntar) { return undefined; }
+    await this.selecionar();
+    return this.projeto;
+  }
+
   async selecionar(): Promise<void> {
     const achados = await vscode.workspace.findFiles(
       '**/*.{dproj,dpr}', '**/{node_modules,__history,__recovery}/**', 200);

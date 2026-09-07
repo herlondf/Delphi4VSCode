@@ -25,8 +25,19 @@ const CHAVES = [
   'buildVerbosity', 'lerPacotes',
 ];
 
-/** Chaves de estado por workspace, que não passam pelo `settings.json`. */
-const ESTADOS = ['projetoAtivo', 'scriptPerguntado'];
+/*
+ * O projeto ativo NÃO vem junto, e não é esquecimento.
+ *
+ * `workspaceState` é isolado por id de extensão: `app.delphi4vscode` não enxerga o que
+ * `app.dfmview` guardou, e não existe API para isso. A primeira versão desta migração
+ * tentava — lia a própria caixa vazia procurando a chave antiga, não achava nada, e dava tudo
+ * por migrado.
+ *
+ * O efeito foi mudo e caro: depois do rename todo mundo ficou sem projeto ativo, e sem
+ * projeto o Code Insight sobe, aponta para lugar nenhum e responde `null` a tudo. Quem cobre
+ * esse buraco agora é `BuildManager.garantirProjeto`, que pergunta em vez de deixar em
+ * branco.
+ */
 
 export async function migrarConfiguracoes(ctx: vscode.ExtensionContext): Promise<string[]> {
   if (ctx.globalState.get<boolean>(MARCA)) { return []; }
@@ -58,14 +69,6 @@ export async function migrarConfiguracoes(ctx: vscode.ExtensionContext): Promise
       } catch {
         // workspace sem pasta aberta recusa o alvo; não é motivo para abortar o resto
       }
-    }
-  }
-
-  for (const chave of ESTADOS) {
-    const valor = ctx.workspaceState.get(`${ANTIGO}.${chave}`);
-    if (valor !== undefined && ctx.workspaceState.get(`${NOVO}.${chave}`) === undefined) {
-      await ctx.workspaceState.update(`${NOVO}.${chave}`, valor);
-      movidas.push(chave);
     }
   }
 

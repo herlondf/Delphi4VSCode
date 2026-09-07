@@ -81,11 +81,17 @@ test('o que já foi configurado no nome novo manda', async () => {
   assert.deepEqual(amb.gravadas, []);
 });
 
-test('o projeto ativo do workspace vem junto', async () => {
+test('o projeto ativo NÃO vem junto: workspaceState é isolado por extensão', async () => {
+  /*
+   * Não é escolha, é limitação da API — e a versão anterior fingia que dava, lendo a própria
+   * caixa vazia. O resultado foi todo mundo sem projeto ativo depois do rename, com o Code
+   * Insight apontando para lugar nenhum e respondendo `null` a tudo.
+   */
   const amb = ambiente({});
   amb.estadoWs.set('dfmview.projetoAtivo', { nome: 'X.dproj' });
   await carregar(amb.vscode).migrarConfiguracoes(amb.ctx);
-  assert.deepEqual(amb.estadoWs.get('delphi4vscode.projetoAtivo'), { nome: 'X.dproj' });
+  assert.equal(amb.estadoWs.get('delphi4vscode.projetoAtivo'), undefined,
+    'não dá para ler o estado de outra extensão; quem cobre isso é garantirProjeto');
 });
 
 test('roda uma vez só: a segunda ativação não mexe em nada', async () => {

@@ -59,3 +59,40 @@ test('alvoAtual lê a configuração de novo a cada chamada, não um retrato', (
     falso.vscode.workspace.getConfiguration = original;
   }
 });
+
+test('garantirProjeto ativa sozinho quando o workspace tem um .dproj só', async () => {
+  /*
+   * A rede de segurança do rename: `workspaceState` e isolado por id de extensao, entao
+   * ninguem herdou o projeto ativo do `dfmview`. Sem projeto, o Code Insight sobe, aponta
+   * para lugar nenhum e responde `null` a tudo.
+   */
+  const build = new BuildManager(contexto());
+  const original = falso.vscode.workspace.findFiles;
+  falso.vscode.workspace.findFiles = async () => [{ fsPath: path.join('D:', 'x', 'Unico.dproj') }];
+  try {
+    const p = await build.garantirProjeto(false);
+    assert.ok(p, 'com um projeto so nao ha o que perguntar');
+    assert.equal(p.nome, 'Unico.dproj');
+    assert.equal(build.projeto.nome, 'Unico.dproj', 'e fica gravado como ativo');
+  } finally {
+    falso.vscode.workspace.findFiles = original;
+  }
+});
+
+test('com varios projetos nao adivinha: devolve vazio quando nao pode perguntar', async () => {
+  const build = new BuildManager(contexto());
+  const original = falso.vscode.workspace.findFiles;
+  falso.vscode.workspace.findFiles = async () => [
+    { fsPath: path.join('D:', 'x', 'Cliente.dproj') }, { fsPath: path.join('D:', 'x', 'Servidor.dproj') }];
+  try {
+    assert.equal(await build.garantirProjeto(false), undefined,
+      'adivinhar aqui ja compilou o projeto errado nesta extensao');
+  } finally {
+    falso.vscode.workspace.findFiles = original;
+  }
+});
+
+test('workspace sem nenhum .dproj nao trava nem lanca', async () => {
+  const build = new BuildManager(contexto());
+  assert.equal(await build.garantirProjeto(true), undefined);
+});

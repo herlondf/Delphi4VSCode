@@ -25,6 +25,23 @@ import { BuildManager } from '../build';
  * carregada, e é por isso que aqui é `import type` mais um `require` lá dentro.
  */
 let cliente: LanguageClient | undefined;
+/*
+ * O estado do Code Insight fica na barra, ao lado do projeto.
+ *
+ * Ele já subiu apontando para lugar nenhum e respondendo `null` a tudo, sem nada na tela
+ * dizendo isso — o usuário conclui que o autocompletar "não funciona". Um item de status
+ * custa nada e torna esse estado impossível de passar batido.
+ */
+let barra: vscode.StatusBarItem | undefined;
+
+function mostrarEstado(texto: string, aviso: boolean, dica: string): void {
+  if (!barra) { return; }
+  barra.text = `$(${aviso ? 'warning' : 'symbol-method'}) ${texto}`;
+  barra.tooltip = dica;
+  barra.backgroundColor = aviso
+    ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
+  barra.show();
+}
 
 function exeDoLsp(bdsBin: string): string | undefined {
   const exe = path.join(bdsBin, 'DelphiLSP.exe');
@@ -66,8 +83,15 @@ export async function registrarLsp(
   ctx.subscriptions.push(
     vscode.commands.registerCommand('delphi4vscode.lspRecarregar', () => apontar()));
 
+  barra = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 98);
+  barra.command = 'delphi4vscode.lspRecarregar';
+  ctx.subscriptions.push(barra);
+  mostrarEstado('Code Insight: subindo', false, 'DelphiLSP iniciando');
+
   const cfg = vscode.workspace.getConfiguration('delphi4vscode');
   if (cfg.get<boolean>('lsp.enabled', true) === false) {
+    mostrarEstado('Code Insight: desligado', false,
+      'delphi4vscode.lsp.enabled está false');
     canal.appendLine('LSP desligado por configuração (delphi4vscode.lsp.enabled).');
     return;
   }
@@ -75,9 +99,11 @@ export async function registrarLsp(
   const bdsBin = cfg.get<string>('bdsBinPath', '');
   const exe = bdsBin ? exeDoLsp(bdsBin) : undefined;
   if (!exe) {
-    canal.appendLine(bdsBin
-      ? `sem DelphiLSP.exe em ${bdsBin} — Code Insight fica no índice próprio`
-      : 'sem instalação do Delphi escolhida — rode "Delphi: compilar" uma vez');
+    const porque = bdsBin
+      ? `sem DelphiLSP.exe em ${bdsBin}`
+      : 'sem instalação do Delphi escolhida';
+    canal.appendLine(`${porque} — Code Insight fica no índice próprio`);
+    mostrarEstado('Code Insight: indisponível', true, porque);
     return;
   }
 
@@ -116,6 +142,7 @@ export async function registrarLsp(
   } catch (err) {
     canal.appendLine(`o DelphiLSP não subiu: ${String(err)}`);
     cliente = undefined;
+    mostrarEstado('Code Insight: falhou', true, String(err).slice(0, 200));
     /*
      * Avisa em vez de degradar calado: sem isto o usuario continua vendo o completar
      * heuristico e acha que o Code Insight do compilador e aquilo.
@@ -130,12 +157,16 @@ export async function registrarLsp(
   canal.appendLine(`DelphiLSP no ar: ${exe}`);
 
   apontar = async (): Promise<void> => {
-    const p = build.projeto;
+    const p = await build.garantirProjeto(true);
     if (!cliente || !p) {
       marcarProjeto(false);
-      vscode.window.showWarningMessage('Escolha o projeto ativo (.dproj) primeiro.');
+      mostrarEstado('Code Insight: sem projeto', true,
+        'Escolha o .dproj ativo para o completar funcionar');
       return;
     }
+    mostrarEstado(`Code Insight: ${p.nome}`, false,
+      `DelphiLSP apontado para ${p.fsPath}
+Clique para recarregar`);
     /*
      * A plataforma e a configuração vêm do BuildManager a cada chamada, não de um `cfg`
      * capturado lá em cima: `getConfiguration()` devolve um retrato, e o retrato tirado na
@@ -145,11 +176,26 @@ export async function registrarLsp(
     const { config, plataforma } = build.alvoAtual;
     await apontarProjeto(cliente, p.fsPath, bdsBin, versao, plataforma, config, canal);
   };
-  if (build.projeto) { await apontar(); }
-  else {
-    canal.appendLine(
-      'servidor no ar, sem projeto ativo — o completar segue pelo índice próprio até você ' +
-      'escolher um .dproj');
+  /*
+   * Sem projeto o servidor não resolve nada. Resolver um aqui é o que faz o Code Insight
+   * funcionar de primeira em vez de exigir que o usuário descubra sozinho que faltava isso.
+   */
+  const p = await build.garantirProjeto(false);
+  if (p) {
+    await apontar();
+    mostrarEstado(`Code Insight: ${p.nome}`, false,
+      `DelphiLSP apontado para ${p.fsPath}
+Clique para recarregar`);
+  } else {
+    mostrarEstado('Code Insight: sem projeto', true,
+      'Escolha o .dproj ativo para o completar funcionar');
+    canal.appendLine('servidor no ar, sem projeto ativo — o completar não vai responder');
+    void vscode.window.showWarningMessage(
+      'Delphi4VSCode: escolha o projeto ativo para o Code Insight funcionar.',
+      'Escolher projeto')
+      .then(a => {
+        if (a) { void vscode.commands.executeCommand('delphi4vscode.selecionarProjeto'); }
+      });
   }
 
   ctx.subscriptions.push(
