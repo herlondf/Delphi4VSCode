@@ -8,6 +8,20 @@ import {
 } from '../dfm/ops';
 import { TextChange } from '../dfm/edit';
 import { walk } from '../dfm/model';
+import { verticalRows } from '../dfm/render';
+
+/** So o suficiente para o grid vertical: a cadeia que distingue categoria de linha comum. */
+const regVGrid = Registry.fromJSON({
+  parents: [
+    ['tform1', 'tform'], ['tform', 'twincontrol'],
+    ['tcxverticalgrid', 'tcxcustomverticalgrid'], ['tcxcustomverticalgrid', 'twincontrol'],
+    ['tcxcategoryrow', 'tcxcustomrow'],
+    ['tcxeditorrow', 'tcxcustomrow'],
+    ['tcxdbmultieditorrow', 'tcxcustomrow'],
+    ['tcxcustomrow', 'tcomponent'],
+    ['twincontrol', 'tcontrol'], ['tcontrol', 'tcomponent'],
+  ],
+});
 
 const reg = Registry.fromJSON({
   parents: [
@@ -235,4 +249,49 @@ test('operações recusam mexer em componente de outro arquivo', () => {
   b.uri = '/tmp/Outro.dfm';
   assert.throws(() => duplicate(d, TEXTO, b), /Outro\.dfm/);
   assert.throws(() => zOrder(d, TEXTO, b, 'front'), /Outro\.dfm/);
+});
+
+test('grid vertical: rotulo real, ordem por ParentID e recuo por categoria', () => {
+  /*
+   * `TcxDBMultiEditorRow` nao tem Properties.Caption: os textos moram na colecao
+   * Properties.Editors. Sem ler dali, a tela mostrava o nome do componente. E as linhas se
+   * ligam por ID/ParentID/Index, entao a ordem do arquivo nao e a ordem da tela.
+   */
+  const src = [
+    'object Form1: TForm1',
+    '  object Grid: TcxVerticalGrid',
+    '    object LinhaSolta: TcxEditorRow',
+    "      Properties.Caption = 'Depois'",
+    '      ID = 2',
+    '      ParentID = 0',
+    '      Index = 1',
+    '    end',
+    '    object Categoria: TcxCategoryRow',
+    "      Properties.Caption = 'Grupo'",
+    '      ID = 0',
+    '      ParentID = -1',
+    '      Index = 0',
+    '    end',
+    '    object Multi: TcxDBMultiEditorRow',
+    '      Properties.Editors = <',
+    '        item',
+    "          Caption = 'IR'",
+    '        end',
+    '        item',
+    "          Caption = 'Valor'",
+    '        end>',
+    '      ID = 1',
+    '      ParentID = 0',
+    '      Index = 0',
+    '    end',
+    '  end',
+    'end',
+  ].join('\n');
+  const doc = parseDfm(src, 'x.dfm')!;
+  const grid = doc.kids[0];
+  const linhas = verticalRows(grid, regVGrid);
+  assert.deepEqual(linhas.map(l => l.label), ['Grupo', 'IR  Valor', 'Depois'],
+    'ordem por Index sob a categoria, e caption vindo dos editores');
+  assert.deepEqual(linhas.map(l => l.nivel), [0, 1, 1]);
+  assert.deepEqual(linhas.map(l => l.cat), [true, false, false]);
 });

@@ -210,23 +210,88 @@ export function gridColumns(node: DfmNode, reg: Registry): Column[] {
   return [];
 }
 
-/** Linhas de um grid vertical: cada uma é um par rótulo/valor empilhado. */
-export function verticalRows(node: DfmNode, reg: Registry): { label: string; cat: boolean }[] {
-  const rows: { label: string; cat: boolean }[] = [];
-  const stack = [...node.kids];
-  while (stack.length) {
-    const n = stack.shift()!;
-    const chain = reg.chain(n.cls);
-    if (chain.some(c => c.includes('customrow') || c.endsWith('categoryrow'))) {
-      rows.push({
-        label: txt(n, 'properties.caption') || txt(n, 'caption')
-          || txt(n, 'properties.databinding.fieldname') || n.name,
-        cat: chain.some(c => c.includes('categoryrow')),
-      });
-    }
-    stack.push(...n.kids);
+/**
+ * Linhas de um grid vertical (`TcxVerticalGrid`), na ordem e na hierarquia em que aparecem.
+ *
+ * Duas coisas que a primeira versao errava e ficam visiveis no form real:
+ *
+ * 1. o rotulo. `TcxDBMultiEditorRow` nao tem `Properties.Caption` — os textos moram na
+ *    colecao `Properties.Editors`, um `Caption` por editor. Sem ler dali, a tela mostrava
+ *    `MultiEditorRowIRValor` no lugar de "IR  Valor".
+ * 2. a ordem. As linhas se ligam por `ID`/`ParentID`/`Index`, como os itens do
+ *    `TdxLayoutControl` — a ordem do arquivo nao e a ordem da tela, e as linhas de uma
+ *    categoria apareciam soltas em vez de sob ela.
+ */
+export interface LinhaVertical {
+  label: string;
+  cat: boolean;
+  /** Profundidade sob a categoria, para o recuo. */
+  nivel: number;
+}
+
+export function verticalRows(node: DfmNode, reg: Registry): LinhaVertical[] {
+  interface Bruta {
+    node: DfmNode;
+    id: number;
+    pai: number;
+    indice: number;
+    cat: boolean;
+    filhos: Bruta[];
   }
-  return rows;
+  const porId = new Map<number, Bruta>();
+  const todas: Bruta[] = [];
+  const pilha = [...node.kids];
+  while (pilha.length) {
+    const n = pilha.shift()!;
+    const cadeia = reg.chain(n.cls);
+    if (cadeia.some(c => c.includes('customrow') || c.endsWith('categoryrow'))) {
+      const b: Bruta = {
+        node: n,
+        id: num(n, 'id', -1),
+        pai: num(n, 'parentid', -1),
+        indice: num(n, 'index', todas.length),
+        cat: cadeia.some(c => c.includes('categoryrow')),
+        filhos: [],
+      };
+      todas.push(b);
+      if (b.id >= 0) { porId.set(b.id, b); }
+    }
+    pilha.push(...n.kids);
+  }
+  if (!todas.length) { return []; }
+
+  const raizes: Bruta[] = [];
+  for (const b of todas) {
+    const pai = b.pai >= 0 ? porId.get(b.pai) : undefined;
+    if (pai && pai !== b) { pai.filhos.push(b); } else { raizes.push(b); }
+  }
+  const porIndice = (a: Bruta, b: Bruta): number => a.indice - b.indice;
+  raizes.sort(porIndice);
+  for (const b of todas) { b.filhos.sort(porIndice); }
+
+  const out: LinhaVertical[] = [];
+  const desce = (b: Bruta, nivel: number): void => {
+    out.push({ label: rotuloDaLinha(b.node), cat: b.cat, nivel });
+    for (const f of b.filhos) { desce(f, nivel + 1); }
+  };
+  for (const r of raizes) { desce(r, 0); }
+  return out;
+}
+
+/** O texto que a linha mostra: caption proprio, os captions dos editores, ou o campo. */
+function rotuloDaLinha(n: DfmNode): string {
+  const proprio = txt(n, 'properties.caption') || txt(n, 'caption');
+  if (proprio) { return proprio; }
+
+  const editores = n.props.get('properties.editors');
+  if (editores) {
+    const textos = parseCollection(editores.raw)
+      .map(it => unquote(it['caption'] ?? '') || unquote(it['databinding.fieldname'] ?? ''))
+      .filter(Boolean);
+    if (textos.length) { return textos.join('  '); }
+  }
+  return txt(n, 'properties.databinding.fieldname')
+    || txt(n, 'databinding.fieldname') || n.name;
 }
 
 const ITEM_NAME = /ItemName\s*=\s*'([^']*)'/g;
@@ -470,8 +535,11 @@ class Painter {
     if (kind === 'grid') {
       const rows = verticalRows(n, this.reg);
       if (rows.length) {
+        // o recuo mostra a que categoria a linha pertence, que e o que a tela do Delphi faz
         this.out.push('<div class="vrows">' + rows.map(r =>
-          `<div class="vrow${r.cat ? ' vcat' : ''}"><span>${esc(r.label)}</span><i></i></div>`)
+          `<div class="vrow${r.cat ? ' vcat' : ''}">` +
+          `<span${r.nivel ? ` style="padding-left:${4 + r.nivel * 9}px"` : ''}>` +
+          `${esc(r.label)}</span><i></i></div>`)
           .join('') + '</div>');
       } else {
         const cols = gridColumns(n, this.reg);

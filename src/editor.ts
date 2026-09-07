@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { declararCampo, removerCampo, EdicaoPas } from './dfm/campos';
 import { DfmDocument } from './dfm/document';
 import { Registry } from './dfm/registry';
 import { renderForm } from './dfm/render';
@@ -358,6 +359,49 @@ export class DfmEditorProvider implements vscode.CustomTextEditorProvider {
     await vscode.workspace.applyEdit(edit);
   }
 
+  /**
+   * Mexe na classe do form no `.pas` irmão.
+   *
+   * O par `.dfm` + `.pas` tem de andar junto: componente no arquivo sem campo na classe
+   * compila e quebra ao abrir a tela. Falhar aqui não pode desfazer a edição do `.dfm` — o
+   * componente já foi criado, e o pior desfecho é o usuário ficar sem nenhum dos dois.
+   */
+  private async editarClasse(
+    document: vscode.TextDocument, doc: DfmDocument,
+    fazer: (texto: string, classe: string) => EdicaoPas[],
+  ): Promise<string> {
+    const classe = doc.root.cls;
+    if (!classe) { return ''; }
+    const pasUri = document.uri.with({
+      path: document.uri.path.replace(/[.](dfm|fmx)$/i, '.pas') });
+    let pas: vscode.TextDocument;
+    try {
+      pas = await vscode.workspace.openTextDocument(pasUri);
+    } catch {
+      return '';   // .dfm sem .pas ao lado
+    }
+    let edicoes: EdicaoPas[];
+    try {
+      edicoes = fazer(pas.getText(), classe);
+    } catch {
+      return ' (não consegui mexer na classe)';
+    }
+    if (!edicoes.length) { return ''; }
+    const edit = new vscode.WorkspaceEdit();
+    const eol = pas.eol === vscode.EndOfLine.CRLF ? EOL_CRLF : EOL_LF;
+    for (const e of edicoes) {
+      if (e.kind === 'delete') {
+        edit.delete(pasUri, pas.lineAt(e.linha).rangeIncludingLineBreak);
+      } else if (e.kind === 'replace') {
+        edit.replace(pasUri, pas.lineAt(e.linha).range, e.texto);
+      } else {
+        edit.insert(pasUri, new vscode.Position(e.linha, 0), e.texto + eol);
+      }
+    }
+    await vscode.workspace.applyEdit(edit);
+    return ' e declarado na classe';
+  }
+
   private load(document: vscode.TextDocument): DfmDocument {
     return new DfmDocument(document.uri.fsPath, document.getText(), this.registry());
   }
@@ -585,8 +629,10 @@ export class DfmEditorProvider implements vscode.CustomTextEditorProvider {
           : addComponent(doc, node, cls, msg.left ?? 8, msg.top ?? 8, reg);
         changes = r.changes;
         await this.registrarUses(document, cls);
-        aviso = destino
-          ? `${r.name} criado no grupo ${destino.grupo}` : `${r.name} criado`;
+        const naClasse = await this.editarClasse(document, doc,
+          (texto, classe) => declararCampo(texto, classe, r.name, cls));
+        aviso = (destino
+          ? `${r.name} criado no grupo ${destino.grupo}` : `${r.name} criado`) + naClasse;
         break;
       }
       case 'addFrame': {
@@ -613,11 +659,15 @@ export class DfmEditorProvider implements vscode.CustomTextEditorProvider {
         changes = setMenu(doc, document.getText(), node, msg.itens ?? []);
         aviso = 'menu atualizado';
         break;
-      case 'delete':
+      case 'delete': {
         if (!node) { throw new EditError('componente não encontrado'); }
+        const nome = node.name;
         changes = removeComponent(doc, node);
-        aviso = `${node.name} apagado`;
+        const daClasse = await this.editarClasse(document, doc,
+          (texto, classe) => removerCampo(texto, classe, nome));
+        aviso = `${nome} apagado` + (daClasse ? ' e tirado da classe' : '');
         break;
+      }
       case 'duplicate': {
         if (!node) { throw new EditError('componente não encontrado'); }
         const r = duplicate(doc, document.getText(), node);
