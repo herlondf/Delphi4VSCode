@@ -278,17 +278,21 @@ e o LSP é o que leva mais tempo até a primeira versão instalável.
 
 ---
 
-## 6. Levantamento: o que ainda dá para melhorar
+## 6. Levantamento e execução
 
 Feito depois da Fase 3, com medição no projeto do projeto de teste e sondagem da instalação do Delphi.
+Tudo o que está marcado ✅ abaixo foi implementado, medido e instalado (v0.21.0).
 
 ### 6.1 Defeitos reais no que já existe
 
-| # | Onde | Problema |
-|---|---|---|
-| D1 | `lsp/cliente.ts` | Trocar o projeto ativo **não** recarrega o Code Insight: o servidor segue compilando o projeto anterior, sem nada na tela dizendo isso. |
-| D2 | `lsp/cliente.ts` | Trocar Debug↔Release ou Win32↔Win64 também não recarrega — e o objeto de configuração é capturado uma vez na ativação, então nem um recarregar manual pega o valor novo. O sintoma é sutil: completar contra as DCUs da plataforma errada. |
-| D3 | `build.ts` | `ativar()` não avisa ninguém. Não existe evento de "o projeto mudou", e é por isso que D1 acontece. |
+| # | Onde | Problema | Estado |
+|---|---|---|---|
+| D1 | `lsp/cliente.ts` | Trocar o projeto ativo não recarregava o Code Insight: o servidor seguia compilando o projeto anterior, sem nada na tela dizendo isso. | ✅ |
+| D2 | `lsp/cliente.ts` | Trocar Debug↔Release ou Win32↔Win64 idem, e pior: o objeto de configuração era capturado na ativação, então nem um recarregar manual pegava o valor novo. Agora vem de `build.alvoAtual` a cada chamada. | ✅ |
+| D3 | `build.ts` | `ativar()` não avisava ninguém. Agora há `onMudou`, e o `EventEmitter` do stub de teste — que tinha `fire()` vazio, e faria qualquer teste sobre reação a evento passar sem reagir — foi corrigido. | ✅ |
+| D4 | `package.json` | O **problem matcher nunca casou com nada**: a regex esperava o formato do `dcc32` direto e o build vai por MSBuild, que embrulha a linha. Erro de compilação nunca virou item clicável — falha muda, porque ninguém repara na ausência de uma coisa. Agora são dois matchers, com as linhas dos testes **capturadas** de um `.dpr` quebrado de propósito. | ✅ |
+| D5 | `dfm/pascal.ts` | O cruzamento `.dfm`×`.pas` pegava a **primeira** classe da unit, não a do form. Em 14 das 810 units isso significa comparar contra uma classe de apoio, e aí todo componente aparece como "não declarado" — nenhum aviso verdadeiro. Medido depois: 341/341 pares batem. | ✅ |
+| D6 | designer | Criar componente no designer não declarava o campo na classe. Compila, e quebra ao abrir a tela. | ✅ |
 
 ### 6.2 Alavancas de linha de comando ainda não usadas
 
@@ -296,7 +300,7 @@ A instalação traz **89 executáveis** em `bin`. Os que valem, sondados:
 
 | Binário | O que abre | Estado |
 |---|---|---|
-| `AuditsCLI.exe` | Linter e métricas de código em XML (severidade, arquivo, linha; complexidade, LOC, acoplamento por classe). Vira diagnóstico e CodeLens. | Roda; gera `<projeto>.audits.xml` e `.metrics.xml` |
+| `AuditsCLI.exe` | Linter e métricas em XML (severidade, arquivo, linha; complexidade, LOC, acoplamento). | **Medido e adiado.** Roda e gera os XML, mas levou **mais de 15 min sem terminar** no projeto de 874 units — inviável como diagnóstico ao vivo. Serve como comando sob demanda ou para projeto pequeno. |
 | `brcc32.exe` / `cgrc.exe` | Compila `.rc` → `.res`. É o que põe **ícone e version info** no executável. | Não sondado |
 | `GetItCmd.exe` | Instala e desinstala componentes do GetIt pela linha de comando. | Ajuda confirmada |
 | `reFind.exe` | Busca e substituição PCRE em massa, com `.bak`. É a ferramenta que a IDE usa para renomear unit no projeto. | Ajuda confirmada |
@@ -326,3 +330,25 @@ O `Registry` indexa **classes e propriedades**. Não indexa método, função li
 - Sem runner de DUnitX.
 - `pascal.ts` só enxerga a **primeira** classe da unit — o cruzamento `.dfm` × `.pas` erra em unit com duas classes.
 - A leitura dos 312 BPLs leva ~24 s.
+
+
+### 6.6 O que saiu desta rodada
+
+| Entrega | Medida |
+|---|---|
+| **Ctrl+T** e **achar usos** (`workspaceSymbol` e `references`, que o DelphiLSP não oferece) | 29,8 mil símbolos, 0,6 s, 23 MB. A primeira versão dava 454 mil e 207 MB — variável local entrava, e a pasta de terceiros também (no projeto de teste, `vendor` é 3.023 dos 4.515 `.pas`). |
+| **DUnitX no Test Explorer** | 686 testes em 50 fixtures descobertos sem compilar nada; leitura do `dunitx-results.xml` de uma execução real bate os 618 casos. Três estilos de fixture convivem no projeto, e cobrir só o explícito achava **zero**. Flags tiradas da fonte do DUnitX na instalação. |
+| **Formatação** pelo `Formatter.exe` | Idempotente, e o acento sobrevive — o temporário vai com BOM, senão o formatador lê como ANSI. |
+| **Class Completion** | Regras de diretiva perguntadas ao `dcc32` caso a caso; 0 falso-positivo em 810 arquivos. |
+| **Snippets** | 16, com `try..finally` e `try..except` no formato que o CLAUDE.md exige. |
+| **Grid vertical** | Rótulo real (vinha da coleção `Properties.Editors`) e hierarquia por `ParentID`/`Index`. |
+| **Canário de caractere de controle** | Pela terceira vez nesta base, `` numa regex virou um **backspace literal** — compila, não avisa, nunca casa. Agora um teste lê os bytes de `src/`, `media/`, `snippets/` e `out/`. |
+
+### 6.7 O que continua em aberto
+
+- **Depuração.** `rmtdbg280.exe` e `paclient.exe` estão na instalação e não foram sondados. É o teto declarado do projeto.
+- **`brcc32`/`cgrc`** para ícone e version info no executável — não sondados.
+- **`GetItCmd.exe`** para instalar componentes sem a IDE — ajuda confirmada, não integrado.
+- **`reFind.exe`** para renomear unit no projeto inteiro — ajuda confirmada, não integrado.
+- **FastReport** no designer: 4.235 objetos em 23 forms do projeto de teste, mas é um designer à parte, não um controle de form.
+- **`AuditsCLI`** como comando sob demanda, aceitando os 15+ min num projeto grande.
