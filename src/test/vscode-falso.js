@@ -54,7 +54,9 @@ const vscode = {
     asRelativePath: p => p,
   },
   languages: {
-    registerCodeActionsProvider: () => ({ dispose: noop }),
+    registerCodeActionsProvider: () => disp,
+    registerWorkspaceSymbolProvider: () => disp,
+    registerReferenceProvider: () => disp,
     createDiagnosticCollection: () => ({ set: noop, delete: noop, clear: noop, dispose: noop }),
     registerDocumentSymbolProvider: () => disp,
     registerCodeLensProvider: () => disp,
@@ -63,11 +65,8 @@ const vscode = {
     registerCompletionItemProvider: () => disp,
     registerRenameProvider: () => disp,
     registerDocumentFormattingEditProvider: () => disp,
-    registerReferenceProvider: () => disp,
     onDidChangeDiagnostics: ev(),
     getDiagnostics: () => [],
-    registerCompletionItemProvider: () => disp,
-    registerHoverProvider: () => disp,
   },
   commands: {
     registerCommand: (id, fn) => { comandos.push(id); handlers[id] = fn; return disp; },
@@ -79,7 +78,21 @@ const vscode = {
                   with: o => ({ ...o, fsPath: f, path: o.path || f }) }),
     joinPath: (b, ...r) => ({ fsPath: [b.fsPath, ...r].join('\\'), toString: () => r.join('/') }),
   },
-  EventEmitter: class { constructor() { this.event = ev(); } fire() {} dispose() {} },
+  /*
+   * Emissor de verdade, não um `fire()` vazio. Um emissor mudo faz passar qualquer teste
+   * sobre quem reage ao evento — e o evento existe justamente porque não reagir era o bug.
+   */
+  EventEmitter: class {
+    constructor() {
+      this.ouvintes = [];
+      this.event = ouvinte => {
+        this.ouvintes.push(ouvinte);
+        return { dispose: () => { this.ouvintes = this.ouvintes.filter(o => o !== ouvinte); } };
+      };
+    }
+    fire(v) { for (const o of [...this.ouvintes]) { o(v); } }
+    dispose() { this.ouvintes = []; }
+  },
   Disposable: class { dispose() {} },
   TreeItem: class { constructor(l) { this.label = l; } },
   TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
@@ -99,11 +112,20 @@ const vscode = {
   TextEditorRevealType: { InCenter: 2, InCenterIfOutsideViewport: 2 },
   CodeAction: class { constructor(titulo, tipo) { this.title = titulo; this.kind = tipo; } },
   CodeActionKind: { QuickFix: 'quickfix', Refactor: 'refactor' },
+  SymbolInformation: class {
+    constructor(nome, tipo, container, local) {
+      this.name = nome; this.kind = tipo; this.containerName = container; this.location = local;
+    }
+  },
   ViewColumn: { Beside: -2 }, EndOfLine: { LF: 1, CRLF: 2 },
   ConfigurationTarget: { Workspace: 2 },
   DecorationRangeBehavior: { ClosedClosed: 1 },
   OverviewRulerLane: { Right: 4 },
-  SymbolKind: { Object: 18, Field: 7 },
+  SymbolKind: {
+    File: 0, Module: 1, Namespace: 2, Class: 4, Method: 5, Property: 6, Field: 7,
+    Constructor: 8, Interface: 10, Function: 11, Variable: 12, Constant: 13,
+    Struct: 22, TypeParameter: 25, Object: 18,
+  },
   DocumentSymbol: class {},
   RelativePattern: class {},
   MarkdownString: class { constructor(v) { this.value = v; } appendMarkdown() { return this; } },

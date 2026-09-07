@@ -275,3 +275,54 @@ e o LSP é o que leva mais tempo até a primeira versão instalável.
   precisão da inferência).
 - O índice próprio não é jogado fora quando o LSP entrar: ele cobre o que o LSP não faz e o
   que está fora do projeto ativo.
+
+---
+
+## 6. Levantamento: o que ainda dá para melhorar
+
+Feito depois da Fase 3, com medição no projeto do projeto de teste e sondagem da instalação do Delphi.
+
+### 6.1 Defeitos reais no que já existe
+
+| # | Onde | Problema |
+|---|---|---|
+| D1 | `lsp/cliente.ts` | Trocar o projeto ativo **não** recarrega o Code Insight: o servidor segue compilando o projeto anterior, sem nada na tela dizendo isso. |
+| D2 | `lsp/cliente.ts` | Trocar Debug↔Release ou Win32↔Win64 também não recarrega — e o objeto de configuração é capturado uma vez na ativação, então nem um recarregar manual pega o valor novo. O sintoma é sutil: completar contra as DCUs da plataforma errada. |
+| D3 | `build.ts` | `ativar()` não avisa ninguém. Não existe evento de "o projeto mudou", e é por isso que D1 acontece. |
+
+### 6.2 Alavancas de linha de comando ainda não usadas
+
+A instalação traz **89 executáveis** em `bin`. Os que valem, sondados:
+
+| Binário | O que abre | Estado |
+|---|---|---|
+| `AuditsCLI.exe` | Linter e métricas de código em XML (severidade, arquivo, linha; complexidade, LOC, acoplamento por classe). Vira diagnóstico e CodeLens. | Roda; gera `<projeto>.audits.xml` e `.metrics.xml` |
+| `brcc32.exe` / `cgrc.exe` | Compila `.rc` → `.res`. É o que põe **ícone e version info** no executável. | Não sondado |
+| `GetItCmd.exe` | Instala e desinstala componentes do GetIt pela linha de comando. | Ajuda confirmada |
+| `reFind.exe` | Busca e substituição PCRE em massa, com `.bak`. É a ferramenta que a IDE usa para renomear unit no projeto. | Ajuda confirmada |
+| `rmtdbg280.exe`, `paclient.exe` | Depurador remoto e Platform Assistant. É o teto declarado do projeto — vale **investigar**, não prometer. | Não sondado |
+| `tlibimp.exe`, `GenTLB.exe`, `WSDLImp.exe` | Importadores de type library e WSDL. | Não sondados |
+| `convert.exe` | `.dfm` binário ↔ texto. Já temos o nosso; serve de conferência. | Ajuda confirmada |
+
+### 6.3 Buracos do índice próprio
+
+O `Registry` indexa **classes e propriedades**. Não indexa método, função livre, constante nem tipo — e é isso que impede duas coisas que se usam o dia inteiro:
+
+- **Ctrl+T** (ir a símbolo no projeto): `workspaceSymbol` não existe no DelphiLSP e nós não podemos prover.
+- **Achar usos** (`references`): idem.
+
+### 6.4 Designer
+
+| Lacuna | Tamanho medido no projeto de teste |
+|---|---|
+| `TcxVerticalGrid` / `TcxCategoryRow` / `TcxEditorRow` | 138 objetos em 13 forms |
+| FastReport (`Tfrx*`) | 4.235 objetos em 23 forms — é um designer à parte, não um controle de form |
+| Criar componente no designer não declara o campo no `.pas` | todo componente novo |
+
+### 6.5 Fluxo e qualidade
+
+- O `problemMatcher` está declarado e **nunca foi validado** contra saída real do MSBuild: erro de compilação pode não virar item clicável no Problems.
+- Sem snippets de Object Pascal.
+- Sem runner de DUnitX.
+- `pascal.ts` só enxerga a **primeira** classe da unit — o cruzamento `.dfm` × `.pas` erra em unit com duas classes.
+- A leitura dos 312 BPLs leva ~24 s.

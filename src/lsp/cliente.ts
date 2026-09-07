@@ -118,9 +118,14 @@ export async function registrarLsp(
       vscode.window.showWarningMessage('Escolha o projeto ativo (.dproj) primeiro.');
       return;
     }
-    await apontarProjeto(cliente, p.fsPath, bdsBin, versao,
-      cfg.get<string>('buildPlatform', 'Win32'),
-      cfg.get<string>('buildConfig', 'Debug'), canal);
+    /*
+     * A plataforma e a configuração vêm do BuildManager a cada chamada, não de um `cfg`
+     * capturado lá em cima: `getConfiguration()` devolve um retrato, e o retrato tirado na
+     * ativação continua dizendo Win32 depois que o usuário trocou para Win64 — com o
+     * servidor completando contra as DCUs erradas e nada na tela dizendo isso.
+     */
+    const { config, plataforma } = build.alvoAtual;
+    await apontarProjeto(cliente, p.fsPath, bdsBin, versao, plataforma, config, canal);
   };
   if (build.projeto) { await apontar(); }
 
@@ -132,6 +137,8 @@ export async function registrarLsp(
     vscode.workspace.onDidSaveTextDocument(doc => {
       if (/\.dpr(oj)?$/i.test(doc.uri.fsPath)) { void apontar(); }
     }),
+    // trocar de projeto, de configuração ou de plataforma tem o mesmo efeito
+    build.onMudou(() => { if (build.projeto) { void apontar(); } }),
   );
 }
 

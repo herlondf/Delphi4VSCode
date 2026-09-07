@@ -25,6 +25,7 @@ import { registrarLsp } from './lsp/cliente';
 import { registrarNovoProjeto } from './novoProjetoCmd';
 import { registrarFormatador } from './formatar';
 import { registrarCodigo } from './codigoCmd';
+import { registrarSimbolos } from './simbolosNav';
 import { registrarNovoForm } from './newForm';
 import { Descoberta, descobrirFontes } from './dfm/sources';
 import { lerPacotes, pacotesConhecidos } from './dfm/bpl';
@@ -152,6 +153,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   void registrarLsp(ctx, build, canalLsp(ctx));
   registrarFormatador(ctx, canalLsp(ctx));
   registrarCodigo(ctx, () => registry);
+  registrarSimbolos(ctx, build, canalLsp(ctx));
   vigiarFontes(ctx);
   sincronizarSelecao(ctx, provider);
   void loadIndex(ctx);

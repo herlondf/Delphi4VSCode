@@ -31,7 +31,18 @@ export class BuildManager {
   /** Configuração e plataforma têm item próprio, como o combo da toolbar do Delphi. */
   private statusCfg: vscode.StatusBarItem;
 
+  /**
+   * Dispara quando o projeto ativo, a configuração ou a plataforma mudam.
+   *
+   * Existe porque o Code Insight precisa saber: o servidor compila contra o `.dproj` e as
+   * DCUs da plataforma que estão valendo, e continuar apontado para o projeto anterior não dá
+   * erro visível — dá autocompletar de outro projeto, que é pior que autocompletar nenhum.
+   */
+  private readonly mudou = new vscode.EventEmitter<void>();
+  readonly onMudou = this.mudou.event;
+
   constructor(private ctx: vscode.ExtensionContext) {
+    ctx.subscriptions.push(this.mudou);
     this.status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     this.status.command = 'delphi4vscode.selecionarProjeto';
     this.statusCfg = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
@@ -56,6 +67,17 @@ export class BuildManager {
       this.status.tooltip = 'Clique para escolher o .dproj ativo';
       this.status.show();
     }
+  }
+
+  /**
+   * Configuração e plataforma que valem agora, já com o override temporário do
+   * "compilar como...". Pública porque o Code Insight compila contra as DCUs da plataforma
+   * escolhida, e ler a configuração uma vez na ativação deixa o servidor no Win32 depois que
+   * o usuário troca para Win64.
+   */
+  get alvoAtual(): { config: string; plataforma: string } {
+    const { config, plataforma } = this.opcoes();
+    return { config, plataforma };
   }
 
   private opcoes(): { config: string; plataforma: string; verbosidade: string } {
@@ -135,6 +157,7 @@ export class BuildManager {
   async ativar(fsPath: string): Promise<void> {
     await this.ctx.workspaceState.update(ESTADO, lerProjeto(fsPath));
     this.atualizarStatus();
+    this.mudou.fire();
     vscode.window.showInformationMessage(
       `Projeto ativo: ${path.basename(fsPath)} — Ctrl+F9 compila.`);
   }
@@ -175,6 +198,7 @@ export class BuildManager {
     await cfg.update('buildConfig', config, vscode.ConfigurationTarget.Workspace);
     await cfg.update('buildPlatform', plataforma, vscode.ConfigurationTarget.Workspace);
     this.atualizarStatus();
+    this.mudou.fire();
   }
 
   /** Monta a task do VS Code: rsvars + msbuild, com o problem matcher do compilador. */

@@ -214,6 +214,10 @@
       {
         "command": "delphi4vscode.classCompletion",
         "title": "Delphi: completar classe (gerar corpo dos métodos)"
+      },
+      {
+        "command": "delphi4vscode.reindexarSimbolos",
+        "title": "Delphi: reindexar símbolos do projeto"
       }
     ],
     "menus": {
@@ -389,6 +393,19 @@
           "type": "boolean",
           "default": true,
           "description": "Usar o DelphiLSP.exe da instalação do Delphi para completar código, hover e ir para a definição. Desligado, vale o índice próprio da extensão."
+        },
+        "delphi4vscode.symbols.excluir": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "vendor",
+            "vendors",
+            "third-party",
+            "thirdparty"
+          ],
+          "description": "Pastas a pular ao indexar símbolos para o Ctrl+T e para achar usos. O código de terceiros costuma ser a maior parte dos .pas de um projeto grande e não é o que se procura."
         }
       }
     },
