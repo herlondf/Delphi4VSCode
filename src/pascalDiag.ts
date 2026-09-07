@@ -23,6 +23,8 @@ const SEV: Record<CrossIssue['severidade'], vscode.DiagnosticSeverity> = {
 function ladoDoForm(dfmPath: string): {
   componentes: { nome: string; cls: string; linha: number }[];
   handlers: { nome: string; linha: number; prop: string }[];
+  /** Classe da raiz do `.dfm` — e a que o `.pas` tem de declarar. */
+  classe?: string;
 } {
   const componentes: { nome: string; cls: string; linha: number }[] = [];
   const handlers: { nome: string; linha: number; prop: string }[] = [];
@@ -33,6 +35,7 @@ function ladoDoForm(dfmPath: string): {
     return { componentes, handlers };
   }
   if (!root) { return { componentes, handlers }; }
+  const classe = root.cls;
   for (const n of walk(root)) {
     if (n !== root && n.name) { componentes.push({ nome: n.name, cls: n.cls, linha: n.line }); }
     for (const [chave, p] of n.props) {
@@ -44,7 +47,7 @@ function ladoDoForm(dfmPath: string): {
       }
     }
   }
-  return { componentes, handlers };
+  return { componentes, handlers, classe };
 }
 
 export class PascalDiagnostics {
@@ -79,12 +82,16 @@ export class PascalDiagnostics {
       this.colecao.delete(doc.uri);
       return;
     }
-    const unit = parsePascal(doc.getText());
     const dfmPath = doc.uri.fsPath.replace(/\.pas$/i, '.dfm');
     const temForm = fs.existsSync(dfmPath);
 
-    const lado = temForm ? ladoDoForm(dfmPath)
+    const lado: ReturnType<typeof ladoDoForm> = temForm ? ladoDoForm(dfmPath)
       : { componentes: [], handlers: [] };
+    /*
+     * O nome da classe vem do `.dfm`, e nao do palpite: a unit pode declarar varias classes,
+     * e cruzar contra a de apoio marca todo componente do form como nao declarado.
+     */
+    const unit = parsePascal(doc.getText(), lado.classe);
     // sem .dfm ao lado, não há o que cruzar: só as checagens internas da unit
     const issues = crossCheck(unit, lado.componentes, lado.handlers);
 

@@ -40,7 +40,17 @@ const RE_IMPL = /^\s*(?:procedure|function)\s+([A-Za-z_]\w*)\.([A-Za-z_]\w*)/i;
 const RE_SECAO = /^\s*(private|protected|public|published|strict\s+private|strict\s+protected)\b/i;
 const RE_FIM_CLASSE = /^\s*end\s*;/;
 
-export function parsePascal(texto: string): PasUnit {
+/**
+ * Uma classe cujo ancestral parece de tela — e nao de apoio.
+ *
+ * A unit pode declarar varias classes, e o que interessa ao cruzamento com o `.dfm` e a do
+ * form. Pegar simplesmente a primeira fazia o `RelatorioData.pas` do projeto de teste ser
+ * cruzado contra um `TTotaisAuxiliar` de apoio: todo componente do form aparecia
+ * como "nao declarado", e nenhum daqueles avisos era verdadeiro.
+ */
+const ANCESTRAL_DE_TELA = /form|frame|datamodule|dm[A-Z]|webmodule/i;
+
+export function parsePascal(texto: string, preferida?: string): PasUnit {
   const linhas = texto.split(/\r?\n/);
   const out: PasUnit = {
     nome: '', linhaUnit: 0, linhaClasse: 0,
@@ -88,14 +98,29 @@ export function parsePascal(texto: string): PasUnit {
     }
 
     const mc = RE_CLASSE.exec(l);
-    if (mc && !out.classe) {
-      out.classe = mc[1];
-      out.ancestral = mc[2];
-      out.linhaClasse = i;
+    if (mc) {
+      /*
+       * A escolha, em ordem: a classe que o chamador pediu (ele leu o `.dfm` e sabe o nome),
+       * depois a primeira que descende de algo com cara de tela, e so entao a primeira de
+       * todas. Trocar de classe no meio zera o que ja foi colhido da anterior.
+       */
+      const ehPreferida = !!preferida && mc[1].toLowerCase() === preferida.toLowerCase();
+      const ehDeTela = ANCESTRAL_DE_TELA.test(mc[2]);
+      const jaTemMelhor = out.classe
+        && (!preferida || out.classe.toLowerCase() === preferida.toLowerCase())
+        && (ehPreferida ? false : !ehDeTela || ANCESTRAL_DE_TELA.test(out.ancestral ?? ''));
+      if (!jaTemMelhor) {
+        out.classe = mc[1];
+        out.ancestral = mc[2];
+        out.linhaClasse = i;
+        out.campos = [];
+        out.metodos = out.metodos.filter(m => m.implementado);
+      }
       dentroClasse = true;
       secao = 'published';   // antes da primeira seção, o padrão do Delphi é published
       continue;
     }
+    if (dentroClasse && RE_CLASSE.test(l)) { continue; }
 
     if (dentroClasse) {
       const ms = RE_SECAO.exec(l);

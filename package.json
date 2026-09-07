@@ -2,7 +2,7 @@
   "name": "delphi4vscode",
   "displayName": "Delphi4VSCode",
   "description": "Delphi no VS Code: designer de forms, Code Insight do compilador, build e projeto — sem abrir a IDE.",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "publisher": "app",
   "license": "MIT",
   "engines": {

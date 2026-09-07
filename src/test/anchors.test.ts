@@ -157,3 +157,48 @@ test('Anchors ausente pode ser acrescentado pelo inspetor', async () => {
   assert.equal(changes.length, 1);
   assert.match(changes[0].text!, /Anchors = \[akRight, akBottom\]/);
 });
+
+test('unit com mais de uma classe: o cruzamento pega a do form', () => {
+  /*
+   * Medido no projeto de teste: 14 das 810 units declaram mais de uma classe, e pegar simplesmente a
+   * primeira fazia o RelatorioData.pas ser cruzado contra uma classe de apoio —
+   * todo componente do form virava "nao declarado", e nenhum aviso era verdadeiro.
+   */
+  const pas = [
+    'unit FaturaData;', 'interface', 'type',
+    '  TTotaisApoio = class(TObject)',
+    '  public', '    Soma: Currency;', '  end;',
+    '',
+    '  TDmRelatorio = class(TDataModule)',
+    '    Query: TQueryDataSet;',
+    '  end;',
+    'implementation', 'end.', '',
+  ].join('\n');
+
+  const semDica = parsePascal(pas);
+  assert.equal(semDica.classe, 'TDmRelatorio',
+    'o ancestral com cara de tela ganha da classe de apoio que vem antes');
+  assert.deepEqual(semDica.campos.map(c => c.nome), ['Query'],
+    'os campos tem de ser os da classe escolhida, nao os da anterior');
+
+  const comDica = parsePascal(pas, 'TDmRelatorio');
+  assert.equal(comDica.classe, 'TDmRelatorio');
+  assert.deepEqual(comDica.campos.map(c => c.nome), ['Query']);
+
+  // e o cruzamento agora nao acusa nada
+  assert.deepEqual(
+    crossCheck(comDica, [{ nome: 'Query', cls: 'TQueryDataSet', linha: 3 }], []), []);
+});
+
+test('a dica do .dfm ganha quando as duas classes parecem de tela', () => {
+  const pas = [
+    'unit Duas;', 'interface', 'type',
+    '  TFormPrimeiro = class(TForm)', '    A: TButton;', '  end;',
+    '  TFormSegundo = class(TForm)', '    B: TEdit;', '  end;',
+    'implementation', 'end.', '',
+  ].join('\n');
+  assert.equal(parsePascal(pas).classe, 'TFormPrimeiro');
+  const escolhida = parsePascal(pas, 'TFormSegundo');
+  assert.equal(escolhida.classe, 'TFormSegundo');
+  assert.deepEqual(escolhida.campos.map(c => c.nome), ['B']);
+});
