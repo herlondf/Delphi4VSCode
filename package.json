@@ -2,7 +2,7 @@
   "name": "delphi4vscode",
   "displayName": "Delphi4VSCode",
   "description": "Delphi no VS Code: designer de forms, Code Insight do compilador, build e projeto — sem abrir a IDE.",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "publisher": "app",
   "license": "MIT",
   "engines": {
@@ -218,6 +218,10 @@
       {
         "command": "delphi4vscode.reindexarSimbolos",
         "title": "Delphi: reindexar símbolos do projeto"
+      },
+      {
+        "command": "delphi4vscode.descobrirTestes",
+        "title": "Delphi: procurar testes DUnitX"
       }
     ],
     "menus": {
@@ -406,6 +410,11 @@
             "thirdparty"
           ],
           "description": "Pastas a pular ao indexar símbolos para o Ctrl+T e para achar usos. O código de terceiros costuma ser a maior parte dos .pas de um projeto grande e não é o que se procura."
+        },
+        "delphi4vscode.testProject": {
+          "type": "string",
+          "default": "",
+          "description": "Caminho do .dproj do projeto de testes DUnitX. Vazio usa o projeto ativo."
         }
       }
     },

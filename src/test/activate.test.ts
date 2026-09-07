@@ -63,7 +63,7 @@ const ESPERADOS = [
   'delphi4vscode.build', 'delphi4vscode.rebuild', 'delphi4vscode.clean', 'delphi4vscode.usarScriptBuild',
   'delphi4vscode.abrirLog', 'delphi4vscode.cleanBuild', 'delphi4vscode.compilarComo',
   'delphi4vscode.lspRecarregar', 'delphi4vscode.novaUnit', 'delphi4vscode.novoProjeto',
-  'delphi4vscode.classCompletion', 'delphi4vscode.reindexarSimbolos',
+  'delphi4vscode.classCompletion', 'delphi4vscode.reindexarSimbolos', 'delphi4vscode.descobrirTestes',
   'delphi4vscode.verificarProjeto', 'delphi4vscode.resumoProjeto',
   'delphi4vscode.rodar', 'delphi4vscode.compilarERodar', 'delphi4vscode.converterParaTexto',
   'delphi4vscode.acrescentarUnit', 'delphi4vscode.removerUnit',

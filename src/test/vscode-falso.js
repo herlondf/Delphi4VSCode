@@ -52,6 +52,7 @@ const vscode = {
     textDocuments: [], openTextDocument: async () => { throw new Error('sem doc'); },
     applyEdit: async () => true, fs: { writeFile: async () => {} },
     asRelativePath: p => p,
+    findFiles: async () => [],
   },
   languages: {
     registerCodeActionsProvider: () => disp,
@@ -72,6 +73,39 @@ const vscode = {
     registerCommand: (id, fn) => { comandos.push(id); handlers[id] = fn; return disp; },
     executeCommand: async () => {},
   },
+  /*
+   * Controlador de testes com colecoes de verdade: o `activate` monta a arvore aqui, e um
+   * `add` que nao guarda nada faria qualquer teste sobre descoberta passar sem descobrir.
+   */
+  tests: {
+    createTestController: (id, rotulo) => {
+      const colecao = () => {
+        const mapa = new Map();
+        return {
+          get size() { return mapa.size; },
+          add: i => mapa.set(i.id, i),
+          replace: itens => { mapa.clear(); for (const i of itens || []) mapa.set(i.id, i); },
+          get: id2 => mapa.get(id2),
+          delete: id2 => mapa.delete(id2),
+          forEach: fn => mapa.forEach(fn),
+        };
+      };
+      return {
+        id, label: rotulo, items: colecao(), dispose: noop,
+        createTestItem: (id2, rotulo2, uri) =>
+          ({ id: id2, label: rotulo2, uri, children: colecao(), range: undefined }),
+        createRunProfile: (nome, tipo, fn, padrao) => ({ nome, tipo, fn, padrao, dispose: noop }),
+        createTestRun: () => ({
+          enqueued: noop, started: noop, passed: noop, failed: noop, skipped: noop,
+          errored: noop, appendOutput: noop, end: noop,
+        }),
+        refreshHandler: undefined,
+        invalidateTestResults: noop,
+      };
+    },
+  },
+  TestRunProfileKind: { Run: 1, Debug: 2, Coverage: 3 },
+  TestMessage: class { constructor(m) { this.message = m; } },
   tasks: { executeTask: async t => { tarefas.push(t); }, registerTaskProvider: () => disp },
   Uri: {
     file: f => ({ fsPath: f, path: f.replace(/\\/g, '/'), toString: () => 'file:///' + f,
