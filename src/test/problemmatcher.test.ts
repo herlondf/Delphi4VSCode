@@ -105,3 +105,36 @@ test('os snippets existem, sao validos e nao repetem prefixo', () => {
     assert.ok(v.description, `${nome} sem descricao`);
   }
 });
+
+test('as dependencias de producao nao podem ser excluidas do pacote', () => {
+  /*
+   * Defeito real, e do pior tipo: `.vscodeignore` tinha `node_modules/**`, entao o
+   * `vscode-languageclient` nunca foi para o .vsix. A extensao instalava, ativava, e o Code
+   * Insight simplesmente nao existia — o `require` do cliente estourava num modulo ausente.
+   * O que o usuario via era o completar heuristico antigo, achando que era aquilo mesmo.
+   */
+  const deps = Object.keys(pkg.dependencies ?? {});
+  if (!deps.length) { return; }
+  const ignore = fs.readFileSync(path.join(__dirname, '..', '..', '.vscodeignore'), 'utf8');
+  const linhas = ignore.split(/\r?\n/)
+    .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  for (const l of linhas) {
+    assert.ok(!/^node_modules\/?(\*\*)?$/.test(l),
+      `"${l}" tira o node_modules inteiro do pacote, e ha ${deps.length} dependencia(s) ` +
+      `de producao: ${deps.join(', ')}`);
+  }
+});
+
+test('o cliente LSP carrega a lib dentro de um try', () => {
+  /*
+   * Fora do try, a excecao subia para um `void registrarLsp(...)` e virava rejeicao nao
+   * tratada: falha muda, com a extensao aparentando funcionar.
+   */
+  const src = fs.readFileSync(
+    path.join(__dirname, '..', '..', 'src', 'lsp', 'cliente.ts'), 'utf8');
+  const antesDoTry = src.slice(0, src.indexOf('await cliente.start()'));
+  const abre = antesDoTry.lastIndexOf('try {');
+  const req = antesDoTry.lastIndexOf("require('vscode-languageclient/node')");
+  assert.ok(abre >= 0 && req > abre,
+    'o require da lib do LSP tem de estar dentro do try que envolve o start');
+});

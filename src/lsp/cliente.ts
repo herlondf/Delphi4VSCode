@@ -16,7 +16,7 @@ import type {
   LanguageClient, LanguageClientOptions, ServerOptions,
 } from 'vscode-languageclient/node';
 import { gravarConfig, paraUri } from './config';
-import { marcarLsp } from './estado';
+import { marcarLsp, marcarProjeto } from './estado';
 import { BuildManager } from '../build';
 
 /*
@@ -46,6 +46,7 @@ async function apontarProjeto(
   canal.appendLine(`projeto do LSP: ${arquivo}`);
   await c.sendNotification('workspace/didChangeConfiguration',
     { settings: { settingsFile: paraUri(arquivo) } });
+  marcarProjeto(true);
 }
 
 export async function registrarLsp(
@@ -97,16 +98,32 @@ export async function registrarLsp(
     initializationOptions: { serverType: 'controller', agentCount: 2 },
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const lc = require('vscode-languageclient/node');
-  cliente = new lc.LanguageClient(
-    'delphi4vscode.lsp', 'Delphi Code Insight', servidor, opcoes) as LanguageClient;
-  ctx.subscriptions.push(cliente);
   try {
+    /*
+     * O `require` fica DENTRO do try junto com o `start`.
+     *
+     * Ele ja estourou em producao por um motivo bobo e caro: o `.vscodeignore` excluia
+     * `node_modules` inteiro, e o `vscode-languageclient` nao ia no pacote. Fora do try, a
+     * excecao subia para um `void registrarLsp(...)` e virava rejeicao nao tratada — a
+     * extensao ativava normalmente, o Code Insight nao existia, e nada na tela dizia por que.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const lc = require('vscode-languageclient/node');
+    cliente = new lc.LanguageClient(
+      'delphi4vscode.lsp', 'Delphi Code Insight', servidor, opcoes) as LanguageClient;
+    ctx.subscriptions.push(cliente);
     await cliente.start();
   } catch (err) {
     canal.appendLine(`o DelphiLSP não subiu: ${String(err)}`);
     cliente = undefined;
+    /*
+     * Avisa em vez de degradar calado: sem isto o usuario continua vendo o completar
+     * heuristico e acha que o Code Insight do compilador e aquilo.
+     */
+    void vscode.window.showWarningMessage(
+      'Delphi4VSCode: o Code Insight do compilador não subiu. ' +
+      'O completar caiu no índice próprio.', 'Ver o log')
+      .then(a => { if (a) { canal.show(); } });
     return;
   }
   marcarLsp(true);
@@ -115,6 +132,7 @@ export async function registrarLsp(
   apontar = async (): Promise<void> => {
     const p = build.projeto;
     if (!cliente || !p) {
+      marcarProjeto(false);
       vscode.window.showWarningMessage('Escolha o projeto ativo (.dproj) primeiro.');
       return;
     }
@@ -128,6 +146,11 @@ export async function registrarLsp(
     await apontarProjeto(cliente, p.fsPath, bdsBin, versao, plataforma, config, canal);
   };
   if (build.projeto) { await apontar(); }
+  else {
+    canal.appendLine(
+      'servidor no ar, sem projeto ativo — o completar segue pelo índice próprio até você ' +
+      'escolher um .dproj');
+  }
 
   ctx.subscriptions.push(
     /*

@@ -1,9 +1,25 @@
 .vscode/**
-node_modules/**
 src/**
 out/test/**
 tsconfig.json
 *.vsix
 crosscheck-ts.json
-node_modules/vscode-textmate/**
-node_modules/vscode-oniguruma/**
+sandbox/**
+docs/**
+
+# node_modules NÃO entra aqui inteiro.
+#
+# O `vsce` já empacota só as dependências de produção e descarta as de desenvolvimento. Um
+# `node_modules/**` cego levou o `vscode-languageclient` embora do pacote, e o resultado foi o
+# pior tipo de falha: a extensão instala, ativa, e o Code Insight simplesmente não sobe —
+# porque o `require` do cliente LSP estoura num módulo que não veio junto.
+#
+# O que sai daqui é só o que é de desenvolvimento e o `vsce` não tem como saber.
+node_modules/vscode-textmate/test/**
+node_modules/vscode-oniguruma/test/**
+node_modules/**/*.map
+node_modules/**/*.ts
+node_modules/**/.github/**
+node_modules/**/docs/**
+node_modules/**/test/**
+node_modules/**/tests/**
