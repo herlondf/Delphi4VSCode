@@ -8,10 +8,13 @@
 
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { parsePascal, crossCheck, CrossIssue } from './dfm/pascal';
+import {
+  parsePascal, crossCheck, CrossIssue, componentesQueExigemCampo,
+} from './dfm/pascal';
 import { parseDfm } from './dfm/parser';
 import { readDfmText } from './dfm/document';
 import { DfmNode, walk, txt } from './dfm/model';
+import { Registry } from './dfm/registry';
 
 const SEV: Record<CrossIssue['severidade'], vscode.DiagnosticSeverity> = {
   error: vscode.DiagnosticSeverity.Error,
@@ -19,25 +22,41 @@ const SEV: Record<CrossIssue['severidade'], vscode.DiagnosticSeverity> = {
   info: vscode.DiagnosticSeverity.Information,
 };
 
-/** Componentes e handlers declarados no .dfm irmão, com a linha de cada um. */
-function ladoDoForm(dfmPath: string): {
+interface LadoDoForm {
+  /** Só os que exigem campo NESTA classe — ver `componentesQueExigemCampo`. */
   componentes: { nome: string; cls: string; linha: number }[];
+  /** Todos os nomes do arquivo, para a checagem inversa não acusar campo herdado. */
+  todosOsNomes: string[];
   handlers: { nome: string; linha: number; prop: string }[];
-  /** Classe da raiz do `.dfm` — e a que o `.pas` tem de declarar. */
+  /** Classe da raiz do `.dfm` — é a que o `.pas` tem de declarar. */
   classe?: string;
-} {
-  const componentes: { nome: string; cls: string; linha: number }[] = [];
-  const handlers: { nome: string; linha: number; prop: string }[] = [];
+}
+
+const VAZIO: LadoDoForm = { componentes: [], todosOsNomes: [], handlers: [] };
+
+/** Componentes e handlers declarados no .dfm irmão, com a linha de cada um. */
+function ladoDoForm(dfmPath: string, ehVisual: (cls: string) => boolean): LadoDoForm {
   let root: DfmNode | null = null;
   try {
     root = parseDfm(readDfmText(dfmPath).text, dfmPath);
   } catch {
-    return { componentes, handlers };
+    return VAZIO;
   }
-  if (!root) { return { componentes, handlers }; }
-  const classe = root.cls;
+  if (!root) { return VAZIO; }
+
+  const componentes = componentesQueExigemCampo(root, ehVisual);
+  const todosOsNomes: string[] = [];
+  const handlers: { nome: string; linha: number; prop: string }[] = [];
+  const exigem = new Set(componentes.map(c => c.nome.toLowerCase()));
+
   for (const n of walk(root)) {
-    if (n !== root && n.name) { componentes.push({ nome: n.name, cls: n.cls, linha: n.line }); }
+    if (n !== root && n.name) { todosOsNomes.push(n.name); }
+    /*
+     * Handler só é cobrado no mesmo caso do campo: num nó `inherited` o método pode estar na
+     * classe ancestral, que este arquivo não enxerga. Cobrar ali dava 33 avisos falsos nos
+     * forms do projeto de teste, todos em telas que funcionam.
+     */
+    if (n !== root && !exigem.has((n.name || '').toLowerCase())) { continue; }
     for (const [chave, p] of n.props) {
       // OnClick, OnChange, BeforePost... tudo que começa com On/Before/After é handler
       if (!/^(on|before|after)[a-z]/.test(chave)) { continue; }
@@ -47,14 +66,14 @@ function ladoDoForm(dfmPath: string): {
       }
     }
   }
-  return { componentes, handlers, classe };
+  return { componentes, todosOsNomes, handlers, classe: root.cls };
 }
 
 export class PascalDiagnostics {
   private colecao = vscode.languages.createDiagnosticCollection('pascal');
   private timer: NodeJS.Timeout | undefined;
 
-  constructor(ctx: vscode.ExtensionContext) {
+  constructor(ctx: vscode.ExtensionContext, private registry: () => Registry) {
     ctx.subscriptions.push(
       this.colecao,
       vscode.workspace.onDidOpenTextDocument(d => this.agendar(d)),
@@ -85,15 +104,20 @@ export class PascalDiagnostics {
     const dfmPath = doc.uri.fsPath.replace(/\.pas$/i, '.dfm');
     const temForm = fs.existsSync(dfmPath);
 
-    const lado: ReturnType<typeof ladoDoForm> = temForm ? ladoDoForm(dfmPath)
-      : { componentes: [], handlers: [] };
+    const reg = this.registry();
+    const ehVisual = (cls: string): boolean => {
+      const cadeia = reg.chain(cls);
+      return cadeia.includes('tcontrol') || cadeia.includes('twincontrol');
+    };
+    const lado = temForm ? ladoDoForm(dfmPath, ehVisual) : VAZIO;
     /*
      * O nome da classe vem do `.dfm`, e nao do palpite: a unit pode declarar varias classes,
      * e cruzar contra a de apoio marca todo componente do form como nao declarado.
      */
     const unit = parsePascal(doc.getText(), lado.classe);
     // sem .dfm ao lado, não há o que cruzar: só as checagens internas da unit
-    const issues = crossCheck(unit, lado.componentes, lado.handlers);
+    const issues = crossCheck(unit, lado.componentes, lado.handlers,
+      { todosOsNomes: lado.todosOsNomes });
 
     const noPas: vscode.Diagnostic[] = [];
     const noDfm: vscode.Diagnostic[] = [];
@@ -128,6 +152,8 @@ export class PascalDiagnostics {
   }
 }
 
-export function registrarPascalDiagnostics(ctx: vscode.ExtensionContext): PascalDiagnostics {
-  return new PascalDiagnostics(ctx);
+export function registrarPascalDiagnostics(
+  ctx: vscode.ExtensionContext, registry: () => Registry,
+): PascalDiagnostics {
+  return new PascalDiagnostics(ctx, registry);
 }

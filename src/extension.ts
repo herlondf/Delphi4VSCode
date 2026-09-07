@@ -142,7 +142,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   registrarNovoForm(ctx, build, () => registry);
   registrarNovoProjeto(ctx, build);
   registrarLens(ctx);
-  registrarPascalDiagnostics(ctx);
+  registrarPascalDiagnostics(ctx, () => registry);
   registrarPascalNav(ctx, () => registry);
   registrarProjetoCmd(ctx, build, () => registry);
   registrarExecutar(ctx, build);
