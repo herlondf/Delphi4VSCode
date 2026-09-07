@@ -47,6 +47,32 @@ function unitDe(reg: Registry, nome: string): string | undefined {
 }
 
 /** C01 — Ctrl+clique numa classe ou numa unit do `uses`. */
+/**
+ * A resolução pelo índice próprio, sem passar pelo provider.
+ *
+ * Exportada porque o cliente LSP a usa como rede: quando o servidor devolve erro interno num
+ * pedido de definição, o usuário não pode ficar sem nada — cai aqui em silêncio, que é pior
+ * do que a resposta do compilador e muito melhor do que um erro na tela.
+ */
+export function resolverDefinicao(
+  doc: vscode.TextDocument, pos: vscode.Position, reg: Registry,
+): vscode.Location | undefined {
+  const nome = simbolo(doc, pos);
+  if (!nome) { return undefined; }
+
+  if (/^T[A-Za-z0-9_]/.test(nome) && reg.chain(nome).length > 1) {
+    const d = declaracaoDe(reg, nome);
+    if (d) { return d; }
+  }
+  // no `uses`, o símbolo é o nome de uma unit
+  const arquivo = unitDe(reg, nome);
+  if (arquivo) {
+    return new vscode.Location(vscode.Uri.file(arquivo), new vscode.Position(0, 0));
+  }
+  // método do próprio arquivo: da declaração para a implementação, e vice-versa
+  return outroLadoDoMetodo(doc, nome, pos);
+}
+
 export class DefinicaoPascal implements vscode.DefinitionProvider {
   constructor(private registry: () => Registry) {}
 
@@ -54,21 +80,7 @@ export class DefinicaoPascal implements vscode.DefinitionProvider {
     doc: vscode.TextDocument, pos: vscode.Position,
   ): vscode.Location | undefined {
     if (lspNoAr()) { return undefined; }
-    const nome = simbolo(doc, pos);
-    if (!nome) { return undefined; }
-    const reg = this.registry();
-
-    if (/^T[A-Za-z0-9_]/.test(nome) && reg.chain(nome).length > 1) {
-      const d = declaracaoDe(reg, nome);
-      if (d) { return d; }
-    }
-    // no `uses`, o símbolo é o nome de uma unit
-    const arquivo = unitDe(reg, nome);
-    if (arquivo) {
-      return new vscode.Location(vscode.Uri.file(arquivo), new vscode.Position(0, 0));
-    }
-    // método do próprio arquivo: da declaração para a implementação, e vice-versa
-    return outroLadoDoMetodo(doc, nome, pos);
+    return resolverDefinicao(doc, pos, this.registry());
   }
 }
 

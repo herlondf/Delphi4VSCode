@@ -151,7 +151,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
    * responder, e o designer não deve ficar esperando por isso. Se não subir, o índice próprio
    * continua atendendo — é por isso que os dois convivem.
    */
-  void registrarLsp(ctx, build, canalLsp(ctx));
+  void registrarLsp(ctx, build, canalLsp(ctx), () => registry);
   registrarFormatador(ctx, canalLsp(ctx));
   registrarCodigo(ctx, () => registry);
   registrarSimbolos(ctx, build, canalLsp(ctx));

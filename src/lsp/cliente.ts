@@ -18,6 +18,8 @@ import type {
 import { gravarConfig, paraUri } from './config';
 import { marcarLsp, marcarProjeto } from './estado';
 import { BuildManager } from '../build';
+import { Registry } from '../dfm/registry';
+import { resolverDefinicao } from '../pascalNav';
 
 /*
  * `vscode-languageclient` só carrega dentro do VS Code — ele estende classes do módulo
@@ -33,6 +35,8 @@ let cliente: LanguageClient | undefined;
  * custa nada e torna esse estado impossível de passar batido.
  */
 let barra: vscode.StatusBarItem | undefined;
+/** Quantas vezes o servidor fechou nesta sessão. */
+let fechou = 0;
 
 function mostrarEstado(texto: string, aviso: boolean, dica: string): void {
   if (!barra) { return; }
@@ -68,6 +72,7 @@ async function apontarProjeto(
 
 export async function registrarLsp(
   ctx: vscode.ExtensionContext, build: BuildManager, canal: vscode.OutputChannel,
+  registry: () => Registry,
 ): Promise<void> {
   /*
    * O comando entra antes de qualquer desistência.
@@ -109,6 +114,25 @@ export async function registrarLsp(
 
   const versao = /(\d+\.\d+)/.exec(bdsBin)?.[1] ?? '';
   const pasta = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+  /*
+   * A lib carrega aqui, antes das opcoes, porque o `errorHandler` precisa do enum dela — usar
+   * os numeros crus funcionava e envelheceria mal, calado, se a lib mudasse os valores.
+   *
+   * Fica dentro de um try: ela ja faltou no pacote uma vez (o `.vscodeignore` levava o
+   * `node_modules` inteiro), e a excecao subia para um `void registrarLsp(...)` virando
+   * rejeicao nao tratada — a extensao ativava e o Code Insight nao existia.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  let lc: typeof import('vscode-languageclient/node');
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    lc = require('vscode-languageclient/node');
+  } catch (err) {
+    canal.appendLine(`vscode-languageclient não carregou: ${String(err)}`);
+    mostrarEstado('Code Insight: indisponível', true, 'a biblioteca do LSP não veio no pacote');
+    return;
+  }
+
   const servidor: ServerOptions = {
     run: { command: exe, args: ['-LogModes', '0', '-LSPLogging', pasta] },
     debug: { command: exe, args: ['-LogModes', '248', '-LSPLogging', pasta] },
@@ -118,23 +142,75 @@ export async function registrarLsp(
     // Never: o canal do servidor não deve roubar o foco a cada diagnóstico
     revealOutputChannelOn: 0,
     /*
+     * O `DelphiLSP.exe` cai sozinho. Já apareceu no log dele:
+     *
+     *   <Agent1> TDelphiLSPDiagnosticsProcessor.PublishDiagnosticsForFile EAccessViolation
+     *   <Agent1> Kernel exception detected!
+     *
+     * É defeito do binário da Embarcadero e não há o que corrigir daqui. O que dá para fazer
+     * é não deixar o processo morto: continuar depois de um erro de pedido, e reiniciar
+     * algumas vezes se ele fechar. Sem limite viraria um laço de reinício com o servidor
+     * quebrado; 4 tentativas cobrem a queda ocasional sem esconder a quebra permanente.
+     */
+    errorHandler: {
+      error: (erro, _msg, contagem) => {
+        canal.appendLine(`erro do servidor (${contagem ?? 1}): ${String(erro).slice(0, 200)}`);
+        return { action: lc.ErrorAction.Continue };
+      },
+      closed: () => {
+        fechou += 1;
+        canal.appendLine(`o servidor fechou (${fechou})`);
+        if (fechou > 4) {
+          mostrarEstado('Code Insight: caiu', true,
+            'O DelphiLSP fechou várias vezes. Clique para tentar de novo.');
+          return { action: lc.CloseAction.DoNotRestart };
+        }
+        return { action: lc.CloseAction.Restart };
+      },
+    },
+    /*
      * `controller` reserva um processo só para o Error Insight e outro para o resto. Com um
      * agente só, digitar rápido faz o diagnóstico e o completar disputarem a mesma fila.
      */
     initializationOptions: { serverType: 'controller', agentCount: 2 },
+    /*
+     * O servidor erra, e o erro dele não pode virar erro na cara do usuário.
+     *
+     * `textDocument/definition` já devolveu `-32603 Internal server error` num Ctrl+clique
+     * comum de unit no `uses`. Sem isto, o cliente escreve "Request failed" no canal e o
+     * usuário fica sem navegação nenhuma — porque o `pascalNav` se cala enquanto o servidor
+     * está no ar. Aqui o erro vira log e a resposta cai no índice próprio.
+     */
+    middleware: {
+      provideDefinition: async (doc, pos, token, next) => {
+        try {
+          return await next(doc, pos, token);
+        } catch (err) {
+          canal.appendLine(`definition falhou no servidor (${String(err).slice(0, 120)}) ` +
+            '— caindo no índice próprio');
+          return resolverDefinicao(doc, pos, registry());
+        }
+      },
+      provideCompletionItem: async (doc, pos, ctxCompl, token, next) => {
+        try {
+          return await next(doc, pos, ctxCompl, token);
+        } catch (err) {
+          canal.appendLine(`completion falhou no servidor: ${String(err).slice(0, 120)}`);
+          return undefined;
+        }
+      },
+      provideHover: async (doc, pos, token, next) => {
+        try {
+          return await next(doc, pos, token);
+        } catch (err) {
+          canal.appendLine(`hover falhou no servidor: ${String(err).slice(0, 120)}`);
+          return undefined;
+        }
+      },
+    },
   };
 
   try {
-    /*
-     * O `require` fica DENTRO do try junto com o `start`.
-     *
-     * Ele ja estourou em producao por um motivo bobo e caro: o `.vscodeignore` excluia
-     * `node_modules` inteiro, e o `vscode-languageclient` nao ia no pacote. Fora do try, a
-     * excecao subia para um `void registrarLsp(...)` e virava rejeicao nao tratada — a
-     * extensao ativava normalmente, o Code Insight nao existia, e nada na tela dizia por que.
-     */
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const lc = require('vscode-languageclient/node');
     cliente = new lc.LanguageClient(
       'delphi4vscode.lsp', 'Delphi Code Insight', servidor, opcoes) as LanguageClient;
     ctx.subscriptions.push(cliente);

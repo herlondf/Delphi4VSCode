@@ -125,16 +125,19 @@ test('as dependencias de producao nao podem ser excluidas do pacote', () => {
   }
 });
 
-test('o cliente LSP carrega a lib dentro de um try', () => {
+test('o require da lib do LSP esta protegido por try', () => {
   /*
-   * Fora do try, a excecao subia para um `void registrarLsp(...)` e virava rejeicao nao
-   * tratada: falha muda, com a extensao aparentando funcionar.
+   * Desprotegido, a excecao subia para um `void registrarLsp(...)` e virava rejeicao nao
+   * tratada: a extensao ativava, o Code Insight nao existia, e nada dizia por que. Aconteceu
+   * de verdade quando o .vscodeignore levou o node_modules embora.
    */
   const src = fs.readFileSync(
     path.join(__dirname, '..', '..', 'src', 'lsp', 'cliente.ts'), 'utf8');
-  const antesDoTry = src.slice(0, src.indexOf('await cliente.start()'));
-  const abre = antesDoTry.lastIndexOf('try {');
-  const req = antesDoTry.lastIndexOf("require('vscode-languageclient/node')");
-  assert.ok(abre >= 0 && req > abre,
-    'o require da lib do LSP tem de estar dentro do try que envolve o start');
+  const req = src.indexOf("require('vscode-languageclient/node')");
+  assert.ok(req > 0, 'o cliente precisa carregar a lib');
+  const antes = src.slice(0, req);
+  const abertos = (antes.match(/\btry\s*\{/g) ?? []).length;
+  const fechados = (antes.match(/\}\s*catch\b/g) ?? []).length;
+  assert.ok(abertos > fechados,
+    'o require tem de estar dentro de um try que ainda nao fechou');
 });
