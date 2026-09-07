@@ -395,7 +395,13 @@ export class BuildManager {
       new vscode.ShellExecution(
         { value: comandoBuild(bat), quoting: vscode.ShellQuoting.Strong }, [],
         { executable: 'cmd.exe', shellArgs: ['/d', '/c'] }),
-      ['$delphi4vscode-dcc'],
+      /*
+       * Os dois formatos, porque os dois acontecem: o build padrão vai por MSBuild, que
+       * embrulha a linha do compilador, e quem usa script próprio chama o `dcc32` direto.
+       * Só o segundo estava declarado, e por isso erro de compilação nunca virou item
+       * clicável no painel Problems — uma falha muda, porque ninguém repara na ausência.
+       */
+      ['$delphi4vscode-msbuild', '$delphi4vscode-dcc'],
     );
     task.presentationOptions = {
       reveal: vscode.TaskRevealKind.Always,

@@ -1,0 +1,145 @@
+{
+  "try..finally com Free": {
+    "prefix": "tryf",
+    "body": [
+      "${1:Obj} := ${2:TClasse}.Create;",
+      "try",
+      "  $0",
+      "finally",
+      "  ${1:Obj}.Free;",
+      "end;"
+    ],
+    "description": "Cria, usa e libera. É o padrão que o CLAUDE.md exige sempre que há alocação."
+  },
+  "try..except": {
+    "prefix": "trye",
+    "body": [
+      "try",
+      "  $1",
+      "except",
+      "  on E: ${2:Exception} do",
+      "    $0",
+      "end;"
+    ],
+    "description": "Com o `on E:` já posto — `except` sem tratar nem relançar mascara bug."
+  },
+  "for..to": {
+    "prefix": "fori",
+    "body": ["for ${1:I} := ${2:0} to ${3:Lista.Count - 1} do", "begin", "  $0", "end;"],
+    "description": "Laço por índice."
+  },
+  "for..in": {
+    "prefix": "forin",
+    "body": ["for ${1:Item} in ${2:Lista} do", "begin", "  $0", "end;"],
+    "description": "Laço por enumerador."
+  },
+  "while": {
+    "prefix": "while",
+    "body": ["while ${1:Condicao} do", "begin", "  $0", "end;"],
+    "description": "Laço com teste no início."
+  },
+  "case..of": {
+    "prefix": "case",
+    "body": ["case ${1:Valor} of", "  ${2:Opcao}: $0;", "else", "  ;", "end;"],
+    "description": "Seleção múltipla, com else."
+  },
+  "if..then..else": {
+    "prefix": "ifelse",
+    "body": ["if ${1:Condicao} then", "begin", "  $2", "end", "else", "begin", "  $0", "end;"],
+    "description": "Condicional com os dois ramos em bloco."
+  },
+  "with..do": {
+    "prefix": "with",
+    "body": ["with ${1:Objeto} do", "begin", "  $0", "end;"],
+    "description": "Escopo implícito. Legível em bloco curto, armadilha em bloco longo."
+  },
+  "classe": {
+    "prefix": "classe",
+    "body": [
+      "T${1:Nome} = class(${2:TObject})",
+      "private",
+      "  F${3:Campo}: ${4:string};",
+      "public",
+      "  constructor Create;",
+      "  destructor Destroy; override;",
+      "  property ${3:Campo}: ${4:string} read F${3:Campo} write F${3:Campo};",
+      "end;"
+    ],
+    "description": "Esqueleto de classe. O Ctrl+Shift+C gera os corpos em seguida."
+  },
+  "interface com GUID": {
+    "prefix": "interface",
+    "body": [
+      "I${1:Nome} = interface",
+      "  ['{${2:COLE-UM-GUID-NOVO}}']",
+      "  ${0}",
+      "end;"
+    ],
+    "description": "Interface. O GUID tem de ser único — copiar de outra interface quebra o QueryInterface."
+  },
+  "property com getter e setter": {
+    "prefix": "prop",
+    "body": [
+      "property ${1:Nome}: ${2:string} read F${1:Nome} write Set${1:Nome};"
+    ],
+    "description": "Propriedade com campo e setter."
+  },
+  "record": {
+    "prefix": "record",
+    "body": ["T${1:Nome} = record", "  ${2:Campo}: ${3:Integer};", "end;"],
+    "description": "Registro simples."
+  },
+  "unit": {
+    "prefix": "unit",
+    "body": [
+      "unit ${TM_FILENAME_BASE};",
+      "",
+      "interface",
+      "",
+      "uses",
+      "  System.SysUtils,",
+      "  System.Classes;",
+      "",
+      "type",
+      "  $0",
+      "",
+      "implementation",
+      "",
+      "end."
+    ],
+    "description": "Unit vazia com o nome já tirado do arquivo — errar isso é E2004 na hora de compilar."
+  },
+  "teste DUnitX": {
+    "prefix": "dunitx",
+    "body": [
+      "[TestFixture]",
+      "T${1:Nome}Tests = class",
+      "public",
+      "  [Setup]",
+      "  procedure Setup;",
+      "  [TearDown]",
+      "  procedure TearDown;",
+      "  [Test]",
+      "  procedure ${2:Acao}_${3:Contexto}_${4:Resultado};",
+      "end;"
+    ],
+    "description": "Fixture DUnitX com o nome de teste no formato Acao_Contexto_Resultado."
+  },
+  "TStringList com try..finally": {
+    "prefix": "slist",
+    "body": [
+      "${1:Lista} := TStringList.Create;",
+      "try",
+      "  $0",
+      "finally",
+      "  ${1:Lista}.Free;",
+      "end;"
+    ],
+    "description": "O caso mais comum de alocação em Delphi."
+  },
+  "região": {
+    "prefix": "region",
+    "body": ["{$REGION '${1:Nome}'}", "$0", "{$ENDREGION}"],
+    "description": "Bloco dobrável."
+  }
+}

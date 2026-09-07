@@ -33,10 +33,17 @@ test('arquivo ilegível ainda devolve padrões utilizáveis', () => {
   assert.deepEqual(p.plataformas, ['Win32']);
 });
 
-test('o problem matcher entende a saída do compilador Delphi', () => {
+/*
+ * Este teste passava enquanto a producao nao funcionava, e a licao vale registrar: os casos
+ * dele foram INVENTADOS a partir do formato do dcc32, e o build real vai por MSBuild, que
+ * embrulha a linha de outro jeito. Saida capturada de verdade esta em problemmatcher.test.ts.
+ */
+test('o matcher do dcc32 entende a saida do compilador chamado direto', () => {
   const pkg = JSON.parse(fs.readFileSync(
     path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
-  const pm = pkg.contributes.problemMatchers[0];
+  const pm = pkg.contributes.problemMatchers.find(
+    (m: { name: string }) => m.name === 'delphi4vscode-dcc');
+  assert.ok(pm, 'o matcher do dcc precisa continuar existindo');
   const re = new RegExp(pm.pattern[0].regexp);
   const casos: [string, string, string, string, string][] = [
     ['VendaMan.pas(412) Error: E2003 Undeclared identifier: Foo',
