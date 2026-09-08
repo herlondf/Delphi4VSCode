@@ -68,11 +68,12 @@ function canalLsp(ctx: vscode.ExtensionContext): vscode.OutputChannel {
 /**
  * Ativação.
  *
- * O `loadIndex` fica num `finally`, e o motivo é uma falha real: com mais de uma cópia da
- * extensão instalada, a segunda a ativar estoura em `registerCommand` — "command already
- * exists" — e a exceção subia da `activate` inteira. Como o índice era carregado na ÚLTIMA
- * linha, ele nunca rodava, o `registry` ficava vazio, e o designer abria todo form só com a
- * moldura. Sem erro na tela, porque a exceção morria dentro do VS Code.
+ * O `loadIndex` fica num `finally` por uma razão de forma, não por um caso vivido: ele era a
+ * ÚLTIMA linha da ativação, então QUALQUER exceção nas dezenas de registros acima — uma
+ * duplicata de comando, um provider que o host recusa — deixava o `registry` vazio. E índice
+ * vazio não dá erro: dá form sem componente, porque `isVisual` recusa a classe que não foi
+ * indexada. Carregar o índice num `finally` custa nada e tira essa classe inteira de falha
+ * muda do caminho.
  */
 export function activate(ctx: vscode.ExtensionContext): void {
   try {

@@ -5,16 +5,12 @@ detalhe técnico está nas mensagens de commit.
 
 ## 0.27.2
 
-- **Correção: form abrindo sem nenhum componente, parte 2 — a causa de verdade.** Com mais de
-  uma cópia da extensão instalada, todas declaram o mesmo editor de `.dfm` e os mesmos
-  comandos; a segunda a ativar estoura em "command already exists", a exceção sobe da ativação
-  inteira e o índice de classes — carregado na última linha — nunca roda. Sem índice, o
-  designer não desenha nada, e não havia erro na tela porque a exceção morria dentro do
-  VS Code.
-  - o índice passa a ser carregado num `finally`: falha de registro não o impede mais;
-  - a extensão detecta cópias duplicadas e diz quais são, inclusive quando nada estoura —
-    duas cópias podem conviver e a disputa do editor ser decidida em silêncio, com uma versão
-    antiga desenhando o form.
+- **O índice passa a carregar num `finally`.** Ele era a última linha da ativação, então
+  qualquer exceção nos registros acima deixava o índice vazio — e índice vazio não dá erro,
+  dá form sem componente. Agora nenhuma falha de registro impede o carregamento.
+- **Cópia duplicada da extensão é detectada e nomeada.** Duas cópias registradas declaram o
+  mesmo editor de `.dfm` e os mesmos comandos, e a disputa é decidida em silêncio — dá para
+  ficar com uma versão antiga desenhando o form sem perceber.
 
 ## 0.27.1
 

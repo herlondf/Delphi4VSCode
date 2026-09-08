@@ -1,11 +1,16 @@
 /**
  * Cópias duplicadas da extensão instaladas ao mesmo tempo.
  *
- * O caso real: sete cópias — seis com o id antigo, uma com o novo —, todas declarando o mesmo
- * `viewType` de editor de `.dfm` e os mesmos 32 comandos. A segunda a ativar estoura em
- * `registerCommand` ("command already exists"), a exceção sobe da `activate` inteira, e o
- * índice de classes, carregado na última linha, nunca roda. Na tela: todo form abrindo só com
- * a moldura, sem componente nenhum e sem erro nenhum.
+ * Guarda contra um risco concreto, não contra um caso já observado: se duas cópias estiverem
+ * REGISTRADAS, as duas ativam, declaram o mesmo `viewType` de editor de `.dfm` e os mesmos
+ * comandos, e a segunda a chamar `registerCommand` recebe "command already exists". A exceção
+ * sobe da `activate` inteira e o índice de classes não carrega — o designer então desenha a
+ * moldura e mais nada.
+ *
+ * O que motivou o guarda: uma máquina com sete pastas de versões diferentes em
+ * `.vscode/extensions`. Ali seis eram órfãs, fora do `extensions.json`, e o VS Code ignorava —
+ * então NÃO foi a causa daquele caso. Mas o dia em que duas estiverem registradas, a falha é
+ * muda, e descobrir pelo comportamento custa horas; a lista de ids resolve em um olhar.
  */
 
 export interface ExtensaoInstalada {
