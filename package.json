@@ -273,6 +273,16 @@
         "command": "delphi4vscode.iconeDoApp",
         "title": "Delphi: ícone do executável",
         "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.auditar",
+        "title": "Delphi: auditar o projeto (AuditsCLI)",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.limparAuditoria",
+        "title": "Delphi: limpar os achados da auditoria",
+        "category": "Delphi"
       }
     ],
     "menus": {
@@ -471,6 +481,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Caminho do `map2pdb.exe`. O Delphi não gera PDB, e é o PDB que qualquer depurador do Windows lê; o [map2pdb](https://github.com/andersmelander/map2pdb) converte o `.map` detalhado. Vazio: procura no workspace."
+        },
+        "delphi4vscode.audits.exe": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Caminho do `AuditsCLI.exe`. Ele vem no RAD Studio 11 (`22.0`) em diante; vazio procura em todas as instalações."
         }
       }
     },

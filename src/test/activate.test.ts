@@ -71,6 +71,7 @@ const ESPERADOS = [
   'delphi4vscode.novoForm', 'delphi4vscode.novoFrame', 'delphi4vscode.novoDataModule',
   'delphi4vscode.alternarDeclaracao', 'delphi4vscode.depurar',
   'delphi4vscode.versaoDoApp', 'delphi4vscode.iconeDoApp',
+  'delphi4vscode.auditar', 'delphi4vscode.limparAuditoria',
 ];
 
 test('activate() vai até o fim e registra todos os comandos do manifesto', () => {
