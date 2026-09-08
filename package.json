@@ -263,6 +263,16 @@
         "command": "delphi4vscode.depurar",
         "title": "Delphi: depurar (compila, gera símbolos e sobe o depurador)",
         "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.versaoDoApp",
+        "title": "Delphi: informações de versão do executável",
+        "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.iconeDoApp",
+        "title": "Delphi: ícone do executável",
+        "category": "Delphi"
       }
     ],
     "menus": {

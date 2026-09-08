@@ -24,6 +24,7 @@ import { registrarPascalNav } from './pascalNav';
 import { registrarProjetoCmd } from './projetoCmd';
 import { registrarExecutar } from './executar';
 import { registrarDepurar } from './depurarCmd';
+import { registrarVerInfo } from './verinfoCmd';
 import { registrarLsp } from './lsp/cliente';
 import { registrarNovoProjeto } from './novoProjetoCmd';
 import { registrarFormatador } from './formatar';
@@ -152,6 +153,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   registrarProjetoCmd(ctx, build, () => registry);
   registrarExecutar(ctx, build);
   registrarDepurar(ctx, build, canalLsp(ctx));
+  registrarVerInfo(ctx, build);
   /*
    * O servidor sobe depois de tudo e sem travar a ativação: ele lê o projeto inteiro antes de
    * responder, e o designer não deve ficar esperando por isso. Se não subir, o índice próprio
