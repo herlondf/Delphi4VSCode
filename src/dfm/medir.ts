@@ -19,9 +19,69 @@ import { DfmNode, num, txt, flag } from './model';
 import { Registry } from './registry';
 import { LayoutInfo, Rect, layoutCaption, sizeOf } from './layout';
 
-/** Espaço entre irmãos, e recuo de um grupo que desenha moldura com rótulo. */
-export const GAP = 3;
-export const RECUO_GRUPO = 5;
+/*
+ * Os espaçamentos do `TdxLayoutControl`, tirados da fonte do DevExpress e não do olho.
+ *
+ * `TdxLayoutLookAndFeelOffsets.GetDefaultValue` dá os valores em unidades de diálogo:
+ *
+ *   ControlOffsetHorz/Vert    3      ItemsAreaOffsetHorz/Vert       0
+ *   ItemOffset                4      RootItemsAreaOffsetHorz/Vert   7
+ *
+ * E `DLUToPixels` converte com a MÉDIA das duas direções, o que é incomum e importa:
+ *
+ *   (MulDiv(dlu, tmAveCharWidth, 4) + MulDiv(dlu, tmHeight, 8)) div 2
+ *
+ * Com a fonte padrão de form (largura média 6, altura 13) isso dá 10px para o recuo da área
+ * raiz — que era exatamente o erro dominante contra o que a IDE gravou: ±10 em x e em y, em
+ * 328 e 259 controles. Os valores em pixel abaixo vêm dessa conta.
+ */
+const LARGURA_MEDIA = 5;
+const ALTURA_FONTE = 13;
+
+/**
+ * `MulDiv` do Win32 ARREDONDA, não trunca — e isso muda três das quatro constantes.
+ *
+ * Com truncamento o topo do grupo dava 17 e a IDE usa 18; com arredondamento (e a largura
+ * média de 5 da Tahoma 8) as quatro fecham de uma vez: `ItemOffset` 6, `RootItemsAreaOffset`
+ * 10, `ControlOffset` 4 e o topo 18.
+ */
+function mulDiv(a: number, b: number, c: number): number {
+  return Math.floor((a * b + Math.floor(c / 2)) / c);
+}
+
+/** A conversão do DevExpress, com a fonte padrão. */
+function dlu(unidades: number): number {
+  return Math.floor((mulDiv(unidades, LARGURA_MEDIA, 4)
+    + mulDiv(unidades, ALTURA_FONTE, 8)) / 2);
+}
+
+/** `VDLUToPixels`: só a direção vertical, sem a média. */
+function vdlu(unidades: number): number {
+  return mulDiv(unidades, ALTURA_FONTE, 8);
+}
+
+/** Espaço entre itens irmãos (`ItemOffset`, 4 DLU). */
+export const GAP = dlu(4);
+/** Recuo da área de itens do grupo RAIZ (`RootItemsAreaOffset`, 7 DLU). */
+export const RECUO_RAIZ = dlu(7);
+/** Recuo do controle dentro do item (`ControlOffset`, 3 DLU). */
+export const RECUO_CONTROLE = dlu(3);
+/*
+ * Grupo que não é raiz tem `ItemsAreaOffset` ZERO — a implementação em
+ * `TdxLayoutGroupViewInfoSpecific.GetItemsAreaOffset` devolve 0, e só cresce com barra de
+ * rolagem. O que recua um grupo com moldura é a largura da própria moldura, e essa vem de
+ * `TdxLayoutStandardLookAndFeel.GetGroupBorderWidth`:
+ *
+ *   lado != caption:  FrameWidths + GetGroupBorderOffset
+ *   lado == caption:  VDLUToPixels(4) + FrameWidths div 2 + GetGroupBorderOffset
+ *
+ * `FrameWidths` é 2 no estilo padrão (`lbsFlat`/`lbsStandard`) e `GetGroupBorderOffset` é
+ * `DLUToPixels(fonte, 7)`. Dá 12 nos lados e 17 no topo — e 12 era exatamente o que faltava:
+ * o recuo de 5 deixava 40 controles 7px à esquerda do que a IDE gravou, e 14px mais largos.
+ */
+const MOLDURA = 2;
+export const RECUO_GRUPO = MOLDURA + dlu(7);
+export const RECUO_GRUPO_TOPO = vdlu(4) + Math.floor(MOLDURA / 2) + dlu(7);
 export const ALTO_CAPTION = 14;
 /** Faixa de abas de um grupo `ldTabbed`. */
 export const ALTO_ABA = 22;
@@ -125,7 +185,7 @@ function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
       else { h += p.h + GAP; w = Math.max(w, p.w); }
     }
     if (info.kids.length) { if (horiz) { w -= GAP; } else { h -= GAP; } }
-    if (moldura) { w += RECUO_GRUPO * 2; h += RECUO_GRUPO * 2 + ALTO_CAPTION; }
+    if (moldura) { w += RECUO_GRUPO * 2; h += RECUO_GRUPO + RECUO_GRUPO_TOPO; }
     return { w, h };
   }
 
@@ -185,7 +245,7 @@ function distribuir(
 
 /** Percorre a árvore e devolve o retângulo de tudo, já resolvido. */
 export function medirLayout(
-  info: LayoutInfo, reg: Registry, area: Rect,
+  info: LayoutInfo, reg: Registry, area: Rect, raiz = true,
 ): Medida {
   const medida: Medida = { rect: area, info, filhos: [] };
 
@@ -237,19 +297,25 @@ export function medirLayout(
     const pagina: Rect = {
       x: 0, y: ALTO_ABA, w: area.w, h: Math.max(0, area.h - ALTO_ABA),
     };
-    for (const k of info.kids) { medida.filhos.push(medirLayout(k, reg, pagina)); }
+    for (const k of info.kids) { medida.filhos.push(medirLayout(k, reg, pagina, false)); }
     return medida;
   }
 
   const horiz = ehHorizontal(info);
   const [cap] = layoutCaption(info.node);
   const moldura = flag(info.node, 'showborder') !== false && !!cap;
-  const pad = moldura ? RECUO_GRUPO : 0;
-  const topo = moldura ? ALTO_CAPTION : 0;
+  /*
+   * Só o grupo RAIZ recua a área de itens, e recua `RootItemsAreaOffset` — 7 unidades de
+   * diálogo, 10px na fonte padrão. Grupo interno tem `ItemsAreaOffset` zero; o que ele
+   * eventualmente recua é a moldura que desenha quando tem rótulo, não espaçamento.
+   */
+  const raizPad = raiz ? RECUO_RAIZ : 0;
+  const lado = (moldura ? RECUO_GRUPO : 0) + raizPad;
+  const topo = (moldura ? RECUO_GRUPO_TOPO : 0) + raizPad;
   const interna = {
-    x: pad, y: pad + topo,
-    w: Math.max(0, area.w - pad * 2),
-    h: Math.max(0, area.h - pad * 2 - topo),
+    x: lado, y: topo,
+    w: Math.max(0, area.w - lado * 2),
+    h: Math.max(0, area.h - lado - topo),
   };
 
   const pedidos = info.kids.map(k => pedido(k, reg));
@@ -296,7 +362,7 @@ export function medirLayout(
     const filhoArea: Rect = horiz
       ? { x: offsets[i], y: offCruzado, w: principal[i], h: tamCruzado }
       : { x: offCruzado, y: offsets[i], w: tamCruzado, h: principal[i] };
-    medida.filhos.push(medirLayout(k, reg, filhoArea));
+    medida.filhos.push(medirLayout(k, reg, filhoArea, false));
   });
   return medida;
 }

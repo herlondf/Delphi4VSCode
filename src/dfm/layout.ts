@@ -91,6 +91,25 @@ export function visualKids(node: DfmNode, reg: Registry): DfmNode[] {
  * do controle com o valor que estiver lá, sem efeito. Aplicá-lo faz um `TcxCheckBox` com
  * `Align = alLeft` esticar até a altura inteira do form e cobrir todos os irmãos.
  */
+/**
+ * Área que uma página ocupa dentro do container de abas.
+ *
+ * O `.dfm` grava `ClientRectLeft/Top/Right/Bottom` do container — o retângulo que a própria
+ * IDE calculou. Ele diz mais do que o tamanho: com `HideTabs` o topo é 4, e sem `HideTabs`
+ * é 24, a faixa das abas. O palpite fixo de 2/24 que estava aqui deixava toda página 4px
+ * larga demais, e 18px baixa demais nos 83 containers sem faixa.
+ */
+function areaPagina(pai: DfmNode | undefined, cw: number, ch: number): Rect {
+  if (!pai?.props.has('clientrecttop')) { return { x: 2, y: 24, w: cw - 4, h: ch - 26 }; }
+  const w = num(pai, 'width', cw);
+  const h = num(pai, 'height', ch);
+  const esq = num(pai, 'clientrectleft', 2);
+  const topo = num(pai, 'clientrecttop', 24);
+  const dir = w - num(pai, 'clientrectright', w - 2);
+  const baixo = h - num(pai, 'clientrectbottom', h - 2);
+  return { x: esq, y: topo, w: cw - esq - dir, h: ch - topo - baixo };
+}
+
 export function place(
   kids: DfmNode[], cw: number, ch: number, reg: Registry, px = 12, pai?: DfmNode,
 ): Map<DfmNode, Rect> {
@@ -110,7 +129,7 @@ export function place(
 
   for (const k of kids) {
     if (reg.kind(k.cls) === 'tab') {
-      rects.set(k, { x: 2, y: 24, w: cw - 4, h: ch - 26 });
+      rects.set(k, areaPagina(pai, cw, ch));
       continue;
     }
     const align = semAlign ? '' : alignVcl(txt(k, 'align', ''));

@@ -8,7 +8,9 @@ import * as assert from 'node:assert/strict';
 import { Registry } from '../dfm/registry';
 import { parseDfm } from '../dfm/parser';
 import { layoutTree, isLayoutHost, Rect } from '../dfm/layout';
-import { medirLayout, Medida } from '../dfm/medir';
+import {
+  medirLayout, Medida, GAP, RECUO_RAIZ, RECUO_GRUPO, RECUO_GRUPO_TOPO,
+} from '../dfm/medir';
 import { DfmNode } from '../dfm/model';
 
 const reg = Registry.fromJSON({
@@ -70,10 +72,10 @@ test('ahRight ancora no fim do grupo, como o rodapé de OK/Cancelar', () => {
     [...CABECA, ...botao('Esq', 0, 'ahLeft'), ...botao('Ok', 1, 'ahRight'),
      ...botao('Cancelar', 2, 'ahRight'), '  end', 'end'],
     { x: 0, y: 0, w: 400, h: 25 });
-  assert.equal(m.get('ItemEsq')!.rect.x, 0);
+  assert.equal(m.get('ItemEsq')!.rect.x, RECUO_RAIZ);
   // Cancelar cola na borda; OK fica logo antes, com o vão no meio
-  assert.equal(m.get('ItemCancelar')!.rect.x + 75, 400);
-  assert.equal(m.get('ItemOk')!.rect.x + 75, 400 - 75 - 3);
+  assert.equal(m.get('ItemCancelar')!.rect.x + 75, 400 - RECUO_RAIZ);
+  assert.equal(m.get('ItemOk')!.rect.x + 75, 400 - RECUO_RAIZ - 75 - GAP);
 });
 
 test('o controle não encolhe abaixo do tamanho gravado — era o botão cortado', () => {
@@ -82,6 +84,9 @@ test('o controle não encolhe abaixo do tamanho gravado — era o botão cortado
     { x: 0, y: 0, w: 400, h: 12 });
   assert.equal(m.get('ItemOk')!.controle!.rect.h, 25);
 });
+
+/* O espaço útil, escolhido divisível por 4 para a divisão 300:100 ser exata. */
+const UTIL = 800;
 
 test('dois ahClient dividem o espaço proporcionalmente ao que pedem', () => {
   const m = medir([
@@ -115,12 +120,12 @@ test('dois ahClient dividem o espaço proporcionalmente ao que pedem', () => {
     '    end',
     '  end',
     'end',
-  ], { x: 0, y: 0, w: 803, h: 21 });
+  ], { x: 0, y: 0, w: UTIL + RECUO_RAIZ * 2 + GAP, h: 21 });
   const largo = m.get('ItemLargo')!.rect.w;
   const estreito = m.get('ItemEstreito')!.rect.w;
-  assert.equal(largo + estreito + 3, 803);
-  assert.equal(largo, 600);
-  assert.equal(estreito, 200);
+  assert.equal(largo + estreito, UTIL);
+  assert.equal(largo, UTIL * 3 / 4);
+  assert.equal(estreito, UTIL / 4);
 });
 
 test('Parent = nil tira o item da árvore em vez de empilhá-lo abaixo do form', () => {
@@ -172,4 +177,37 @@ test('ldTabbed sobrepõe as páginas, uma faixa de abas acima', () => {
   const b = m.get('PaginaB')!.rect;
   assert.deepEqual(a, b);
   assert.equal(a.y + a.h, 200);
+});
+
+test('grupo com moldura recua 12 nos lados e 18 no topo, como o look-and-feel padrão', () => {
+  const m = medir([
+    'object Form1: TForm1',
+    '  object dxLayoutControl1: TdxLayoutControl',
+    '    object Raiz: TdxLayoutGroup',
+    '      Index = 0',
+    '    end',
+    '    object Moldura: TdxLayoutGroup',
+    "      CaptionOptions.Text = 'Forma de pagamento'",
+    '      Parent = Raiz',
+    '      Index = 0',
+    '    end',
+    '    object Ctl: TcxButton',
+    '    end',
+    '    object ItemCtl: TdxLayoutItem',
+    '      Parent = Moldura',
+    '      Control = Ctl',
+    '      ControlOptions.OriginalWidth = 75',
+    '      ControlOptions.OriginalHeight = 25',
+    '      CaptionOptions.Visible = False',
+    '      Index = 0',
+    '    end',
+    '  end',
+    'end',
+  ], { x: 0, y: 0, w: 400, h: 200 });
+  // o retângulo de cada medida é relativo ao grupo que a contém, não ao host
+  assert.equal(m.get('Moldura')!.rect.x, RECUO_RAIZ);
+  assert.equal(m.get('ItemCtl')!.rect.x, RECUO_GRUPO);
+  assert.equal(m.get('ItemCtl')!.rect.y, RECUO_GRUPO_TOPO);
+  assert.equal(RECUO_GRUPO, 12);
+  assert.equal(RECUO_GRUPO_TOPO, 18);
 });

@@ -4,6 +4,16 @@ import { parseDfm } from '../dfm/parser';
 import { decodeBinaryDfm, isBinaryDfm } from '../dfm/binary';
 import { Registry } from '../dfm/registry';
 import { formatValue, propKind, num, txt, unquote, walk, DfmNode } from '../dfm/model';
+import { place, visualKids } from '../dfm/layout';
+
+const regTab = Registry.fromJSON({
+  parents: [
+    ['tform1', 'tform'], ['tform', 'twincontrol'],
+    ['tcxpagecontrol', 'twincontrol'], ['tcxtabsheet', 'twincontrol'],
+    ['twincontrol', 'tcontrol'], ['tcontrol', 'tcomponent'],
+  ],
+  kinds: { tcxtabsheet: 'tab' },
+});
 
 const SAMPLE = `object MainForm: TMainForm
   Caption = 'It''s a test'
@@ -196,4 +206,30 @@ test('caminhos são únicos e estáveis na árvore', () => {
   const paths = [...walk(root)].map((n: DfmNode) => n.path);
   assert.equal(new Set(paths).size, paths.length);
   assert.ok(paths.includes('MainForm/ToolbarPanel/NewButton'));
+});
+
+test('a página de abas usa o ClientRect gravado, não o palpite de 2/24', () => {
+  const dfm = [
+    'object Form1: TForm1',
+    '  object PageControl: TcxPageControl',
+    '    Left = 0',
+    '    Top = 0',
+    '    Width = 769',
+    '    Height = 589',
+    '    Properties.HideTabs = True',
+    '    ClientRectBottom = 585',
+    '    ClientRectRight = 765',
+    '    ClientRectLeft = 4',
+    '    ClientRectTop = 4',
+    '    object TabDetalhes: TcxTabSheet',
+    '    end',
+    '    object TabOutra: TcxTabSheet',
+    '    end',
+    '  end',
+    'end',
+  ].join('\n');
+  const doc = parseDfm(dfm, 'x.dfm')!;
+  const page = doc.kids[0];
+  const r = place(visualKids(page, regTab), 769, 589, regTab, 12, page).get(page.kids[0])!;
+  assert.deepEqual(r, { x: 4, y: 4, w: 761, h: 581 });
 });

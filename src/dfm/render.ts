@@ -516,7 +516,9 @@ class Painter {
       this.out.push('<i class="grip g-se" data-dir="se"></i>');
     }
 
-    if (tabs.length > 1) {
+    // `HideTabs` some com a faixa; sem isso ela cobria o topo da página, que o `ClientRect`
+    // do próprio `.dfm` já diz começar em 4 e não em 24.
+    if (tabs.length > 1 && flag(n, 'properties.hidetabs') !== true) {
       const pos = TAB_POS[txt(n, 'tabposition', '').toLowerCase()] ?? 'top';
       this.out.push(`<div class="tabbar tb-${pos}">`);
       tabs.forEach((t, i) => this.out.push(
