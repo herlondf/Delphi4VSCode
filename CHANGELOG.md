@@ -3,6 +3,19 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.27.2
+
+- **Correção: form abrindo sem nenhum componente, parte 2 — a causa de verdade.** Com mais de
+  uma cópia da extensão instalada, todas declaram o mesmo editor de `.dfm` e os mesmos
+  comandos; a segunda a ativar estoura em "command already exists", a exceção sobe da ativação
+  inteira e o índice de classes — carregado na última linha — nunca roda. Sem índice, o
+  designer não desenha nada, e não havia erro na tela porque a exceção morria dentro do
+  VS Code.
+  - o índice passa a ser carregado num `finally`: falha de registro não o impede mais;
+  - a extensão detecta cópias duplicadas e diz quais são, inclusive quando nada estoura —
+    duas cópias podem conviver e a disputa do editor ser decidida em silêncio, com uma versão
+    antiga desenhando o form.
+
 ## 0.27.1
 
 - **Correção: form abrindo sem nenhum componente.** A varredura de classes tinha limite de 20

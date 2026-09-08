@@ -168,7 +168,7 @@ const vscode = {
   ProgressLocation: { Window: 10, Notification: 15 },
   CustomTextEditorProvider: class {},
   FileType: { File: 1, Directory: 2 },
-  extensions: { getExtension: () => undefined },
+  extensions: { getExtension: () => undefined, all: [] },
   env: { openExternal: noop },
 };
 

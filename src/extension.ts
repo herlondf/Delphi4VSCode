@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { migrarConfiguracoes } from './migrar';
 import { Registry } from './dfm/registry';
 import { conteudoDoCache, lerCache } from './dfm/cache';
+import { copiasInstaladas } from './dfm/copias';
 import { decodeBinaryDfm, isBinaryDfm } from './dfm/binary';
 import { DfmEditorProvider } from './editor';
 import { DfmSymbolProvider } from './diagnostics';
@@ -64,7 +65,38 @@ function canalLsp(ctx: vscode.ExtensionContext): vscode.OutputChannel {
   return canal;
 }
 
+/**
+ * Ativação.
+ *
+ * O `loadIndex` fica num `finally`, e o motivo é uma falha real: com mais de uma cópia da
+ * extensão instalada, a segunda a ativar estoura em `registerCommand` — "command already
+ * exists" — e a exceção subia da `activate` inteira. Como o índice era carregado na ÚLTIMA
+ * linha, ele nunca rodava, o `registry` ficava vazio, e o designer abria todo form só com a
+ * moldura. Sem erro na tela, porque a exceção morria dentro do VS Code.
+ */
 export function activate(ctx: vscode.ExtensionContext): void {
+  try {
+    ativarTudo(ctx);
+  } catch (err) {
+    const copias = copiasInstaladas(vscode.extensions.all, DfmEditorProvider.viewType);
+    void vscode.window.showErrorMessage(
+      copias.length > 1
+        ? `Há ${copias.length} cópias do Delphi4VSCode instaladas (${copias.join(', ')}). ` +
+          'Elas declaram o mesmo editor de .dfm e os mesmos comandos, e uma atrapalha a ' +
+          'outra — o form abre sem componentes. Desinstale as antigas e recarregue a janela.'
+        : `Delphi4VSCode não ativou por completo: ${err instanceof Error ? err.message : err}`,
+      'Ver extensões',
+    ).then(acao => {
+      if (acao) {
+        void vscode.commands.executeCommand('workbench.extensions.search', 'delphi4vscode');
+      }
+    });
+  } finally {
+    void loadIndex(ctx);
+  }
+}
+
+function ativarTudo(ctx: vscode.ExtensionContext): void {
   void migrarConfiguracoes(ctx).then(movidas => {
     if (movidas.length) {
       vscode.window.showInformationMessage(
@@ -170,7 +202,27 @@ export function activate(ctx: vscode.ExtensionContext): void {
   registrarTestes(ctx, build, canalLsp(ctx));
   vigiarFontes(ctx);
   sincronizarSelecao(ctx, provider);
-  void loadIndex(ctx);
+
+  /*
+   * Duplicata é avisada mesmo quando nada estoura.
+   *
+   * Duas cópias podem conviver sem exceção — a segunda perde a disputa do editor em silêncio,
+   * e o `.dfm` passa a ser desenhado por uma versão antiga. Descobrir isso pelo comportamento
+   * custa horas; a lista de ids resolve em um olhar.
+   */
+  const copias = copiasInstaladas(vscode.extensions.all, DfmEditorProvider.viewType);
+  if (copias.length > 1) {
+    void vscode.window.showWarningMessage(
+      `Há ${copias.length} cópias do Delphi4VSCode instaladas: ${copias.join(', ')}. ` +
+      'Todas declaram o mesmo editor de .dfm; qual delas desenha o form é indefinido. ' +
+      'Deixe só uma e recarregue a janela.',
+      'Ver extensões',
+    ).then(acao => {
+      if (acao) {
+        void vscode.commands.executeCommand('workbench.extensions.search', 'delphi4vscode');
+      }
+    });
+  }
 }
 
 /**
