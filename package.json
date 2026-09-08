@@ -5,13 +5,44 @@
   "version": "0.25.0",
   "publisher": "app",
   "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#151A22",
+    "theme": "dark"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Linters",
+    "Testing",
+    "Snippets",
+    "Visualization"
+  ],
+  "keywords": [
+    "delphi",
+    "object pascal",
+    "pascal",
+    "dfm",
+    "fmx",
+    "vcl",
+    "firemonkey",
+    "devexpress",
+    "rad studio",
+    "embarcadero",
+    "dunitx",
+    "code insight"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/herlondf/Delphi4VSCode.git"
+  },
+  "homepage": "https://github.com/herlondf/Delphi4VSCode#readme",
+  "bugs": {
+    "url": "https://github.com/herlondf/Delphi4VSCode/issues"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": [
-    "Visualization",
-    "Programming Languages"
-  ],
   "main": "./out/extension.js",
   "capabilities": {
     "untrustedWorkspaces": {

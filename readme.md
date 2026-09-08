@@ -1,217 +1,136 @@
-# Delphi Form Designer
+# Delphi4VSCode
 
-Abre e edita arquivos `.dfm` e `.fmx` do Delphi visualmente dentro do VS Code, com suporte a
-VCL, FireMonkey e DevExpress.
+**Escrever, desenhar, compilar e rodar Delphi sem abrir a IDE.**
 
-## O que faz
+Autocompletar vindo do compilador de verdade, designer visual de `.dfm`, build por MSBuild,
+testes DUnitX no Test Explorer e scaffolding de projeto — dentro do VS Code.
 
-- **Renderiza o form** a partir do `.dfm`, resolvendo herança de componentes pelos `.pas` do
-  projeto — um `TcxGrid` desenha como grid, não como caixa cinza.
-- **Resolve frames e herança visual**: `inline Frame1: TFrame1` e `inherited Form1: TForm1`
-  carregam o `.dfm` de origem e mesclam os overrides.
-- **Layout do dxLayoutControl**: alterna entre as coordenadas gravadas pelo designer e o
-  layout recalculado, em que reordenar e redimensionar têm efeito visível.
-- **Edita** posição, tamanho e propriedades. Toda edição é um `WorkspaceEdit`: o arquivo fica
-  sujo na aba, o Ctrl+Z é o do VS Code e o save é seu.
-- **Data modules** desenham a superfície com os componentes, como no Delphi.
-- **Lê `.dfm` binário** (formato TPF0) e **grava uma cópia binária** quando você pedir.
-- **Problemas** do form no painel Problems: componente fora do pai, TabOrder repetido, nome
-  duplicado, e propriedade que a classe não declara.
-- **Estrutura** navegável, mais uma faixa com os componentes não visuais do form — actions,
-  menus, data sources — que nunca aparecem na tela.
+---
 
-## Object Inspector
+## Por que o autocompletar é o do compilador
 
-Espelha o do Delphi: categorias, filtro, e uma aba própria para **Eventos**. O botão `A↓`
-alterna entre categorias e ordem alfabética.
+A instalação do Delphi traz o `DelphiLSP.exe`, o mesmo servidor de Code Insight que a IDE usa.
+Ele fala LSP e roda fora dela — só exige um arquivo de projeto que normalmente só a IDE
+escreve. **Esta extensão gera esse arquivo** a partir do seu `.dproj`, e com isso o
+autocompletar deixa de ser adivinhação por nome e passa a vir do compilador:
 
-| tipo de propriedade | como se edita |
-|---|---|
-| texto, número, enum | direto na linha |
-| booleano | lista True/False |
-| cor | amostra clicável + nome (`clBtnFace`) ou `$00BBGGRR` |
-| conjunto (`Font.Style`, `Anchors`) | caixinhas |
-| lista de strings (`Lines`, `Items`) | caixa com uma linha por item |
-| coleção (`Columns`) | ordenar, duplicar e remover itens |
-| referência (`DataSource`, `PopupMenu`) | lista dos componentes compatíveis do form |
-| sub-propriedades (`Font.*`) | grupo que abre e fecha |
-| evento | vai ao método, ou cria o handler no `.pas` |
+```pascal
+Dados.│        →  ItemID, RegistroID, Valor, Emissao, Descricao, Centro, GerarLancamento
+```
 
-O que está gravado neste arquivo vem em **negrito**; o que veio de frame ou ancestral vem em
-itálico. Selecionando vários componentes (Ctrl+clique), o inspetor mostra só o que todos têm
-e grava em todos de uma vez.
+Isso é um `record` declarado em **outra unit** do projeto, resolvido pela cadeia de herança
+inteira. O hover mostra a assinatura real e o arquivo de origem; o Ctrl+clique numa unit do
+`uses` abre o `.pas` dela, resolvido pelo compilador e não por busca de nome.
 
-Trocar o `Name` renomeia de verdade: o `.dfm`, quem apontava para o componente, e no `.pas` o
-campo mais os handlers derivados do nome. A extensão mostra a lista antes de aplicar.
+Requer o RAD Studio instalado. Testado no **Delphi 11 (22.0)** e no **Delphi 10.4 (21.0)**.
 
-## Criar
+---
 
-- **Delphi: novo Form / Frame / Data Module** cria o par `.pas` + `.dfm` e registra a unit no
-  `.dpr` do projeto ativo. Para form, oferece modelos (em branco, diálogo com OK/Cancelar,
-  consulta com grade) ou herdar de um form do projeto.
-- **Insert** abre a paleta com **todos os componentes instalados** — os das fontes indexadas e
-  os que só existem em `.bpl`. A primeira aba mostra os que o projeto já usa, ordenados por
-  frequência (num projeto DevExpress o `TcxButton` vem antes do `TButton`); a aba *todos* traz
-  o resto. O filtro procura por nome de classe e por unit, e vale sobre a paleta inteira. Dá
-  para clicar ou **arrastar até o container**.
-- A unit de cada componente vem do índice — do arquivo, quando há fonte, e do `UnitName` do
-  RTTI, quando a classe só existe compilada — e entra sozinha no `uses` do `.pas`.
-- Dentro de um `TdxLayoutControl`, criar um componente cria junto o `TdxLayoutItem` que o
-  posiciona — sem ele o componente existe mas não aparece.
-- Botão direito: **inserir frame existente**, **salvar a seleção como modelo** e **inserir
-  modelo salvo** (com renumeração automática dos nomes que colidirem).
-- Menu (`TMainMenu`, `TPopupMenu`): editor de itens com caption, separador, subitem e ordem.
+## O que tem
 
-## Projeto ativo e compilação
-
-A view **Delphi** na barra lateral lista todos os `.dproj` e `.dpr` da pasta aberta. Clique
-num `.dproj` para torná-lo ativo — ele sobe para o topo com um ✓ verde, e o nome aparece na
-barra de status embaixo.
-
-Na barra de status ficam dois itens: o **projeto** e a **configuração/plataforma**. Clicar em
-cada um troca o seu. O botão ▶ na barra do designer compila sem tirar a mão do form.
+### Código
 
 | | |
 |---|---|
-| `Ctrl+F9` | compilar o projeto ativo (`/t:Make` — o *Compile* do IDE) |
-| `Shift+F9` | recompilar tudo (`/t:Build` — passa `-B` ao dcc32) |
-| `Ctrl+Shift+F9` | limpar e reconstruir (`/t:Clean;Build` — apaga os DCU e refaz) |
-| clique no nome do projeto | trocar de projeto |
-| clique em `Debug/Win32` | trocar configuração e plataforma |
-| **Delphi: compilar como...** | compila numa configuração só desta vez, sem gravar |
+| **Code Insight** | Autocompletar, hover, ir para a definição, ajuda de assinatura e Error Insight — tudo pelo `DelphiLSP.exe`. Se o servidor cair ou errar, cai no índice próprio em vez de deixar você sem nada. |
+| **Ctrl+T** e **achar usos** | O DelphiLSP não oferece `workspaceSymbol` nem `references`; um índice próprio cobre os dois. |
+| **Class Completion** (`Ctrl+Shift+C`) | Declarei o método na classe, gera o corpo em `implementation`. As regras de qual diretiva se repete no corpo vieram de perguntar ao `dcc32` caso a caso — `overload`, por exemplo, **não** se repete. |
+| **Formatação** | Pelo `Formatter.exe` da instalação, com o seu `Formatter.config`. O mesmo resultado do `Ctrl+D` da IDE. |
+| **Quick fix de `uses`** | No `E2003 Undeclared identifier`, oferece acrescentar a unit que declara o símbolo. |
+| **Snippets** | 16 de Object Pascal, com `try..finally` e fixture DUnitX. |
 
-Os três atalhos também valem com o foco no designer.
+### Designer de forms
 
-`delphi4vscode.buildVerbosity` controla o detalhe (`quiet`, `minimal`, `normal`, `detailed`,
-`diagnostic`). Em `detailed` sai a linha do `dcc32` com o search path inteiro — é o que se
-olha quando uma unit não é encontrada ou vem do lugar errado.
+| | |
+|---|---|
+| **Renderiza `.dfm` e `.fmx`** | Resolve a herança dos componentes pelos `.pas` do projeto: um `TcxGrid` desenha como grade, não como caixa cinza. Lê também os BPLs instalados para conhecer componente que só existe como `.dcu`. |
+| **Herança visual e frames** | `inherited Form1: TForm1` e `inline Frame1: TFrame1` carregam o arquivo de origem e mesclam os overrides. |
+| **`TdxLayoutControl`** | O layout é **calculado**, não lido das coordenadas gravadas — reordenar e redimensionar têm efeito visível. |
+| **Edita** | Arrastar, redimensionar, inspetor de propriedades, paleta com busca, copiar e colar entre forms. Toda edição é um `WorkspaceEdit`: o Ctrl+Z é o do VS Code e o save é seu. |
+| **Sincroniza com o `.pas`** | Criar componente declara o campo na classe; apagar remove. |
+| **`.dfm` binário** | Lê o formato TPF0 e converte para texto quando você pedir. |
 
-**Delphi: abrir log de diagnóstico** mostra o que a extensão fez em cada build: projeto,
-rsvars escolhido, script gerado. O arquivo sobrevive ao reload da janela, ao contrário do
-painel Output.
+### Projeto e build
 
-Os erros do compilador vão para o painel Problems e aparecem **na própria linha do código**.
+| | |
+|---|---|
+| **Compilar** | `Ctrl+F9` compila, `Shift+F9` recompila tudo, `Ctrl+Shift+F9` limpa e reconstrói. Erro de compilação vira item clicável no painel Problems. |
+| **Rodar** | `F9` executa o binário compilado. |
+| **Criar** | Novo projeto (VCL, Console, DLL, Package), nova Unit, novo Form, Frame ou Data Module — já registrados no `.dpr`. |
+| **Testes DUnitX** | Descobertos no fonte sem compilar nada e executados pelo Test Explorer, com a falha levando à linha. |
 
-### Projeto com toolchain própria
+---
 
-Nem todo projeto Delphi compila com o `rsvars.bat` da instalação. Há projeto que carrega no
-próprio repositório o compilador, a lib da VCL recompilada e o `EnvOptions.proj` — porque
-substitui alguma unit da VCL (um `Vcl.Consts.pas` traduzido, por exemplo). Compilar isso com
-a instalação da máquina falha sempre com `F2051`, e não há configuração de search path que
-resolva: os `.dcu` oficiais da VCL foram compilados contra a unit original.
+## Como começar
 
-Nesse caso, **Delphi: usar o script de build do projeto** encontra o script do repositório e
-passa a chamá-lo no lugar do msbuild:
+1. Abra a pasta do seu projeto Delphi.
+2. Escolha o `.dproj` ativo pela barra de status (ou aceite quando a extensão perguntar).
+3. Pronto. O item **Code Insight** na barra mostra o projeto apontado.
 
-```jsonc
-{
-  "delphi4vscode.buildScript": "\"<caminho>/ci/build_debug.bat\" ${project}",
-  "delphi4vscode.buildScriptCwd": "<diretório de onde o script espera rodar>"
-}
-```
+Se o autocompletar não responder, o item de status diz por quê, e o canal
+**Delphi Code Insight** (`Ctrl+Shift+U`) mostra o que o servidor carregou.
 
-Marcadores: `${project}` (nome do `.dproj` sem extensão), `${projectPath}`, `${target}`,
-`${config}`, `${platform}`, `${workspaceFolder}`. Os erros continuam indo para o painel
-Problems.
-
-A distinção entre os dois atalhos é a mesma do Delphi e importa: o `Shift+F9` recompila toda
-unit que tenha fonte no search path. Num projeto que mantém cópia própria de uma unit da VCL
-(um `Vcl.Consts.pas` traduzido, por exemplo), isso recompila a cópia contra os `.dcu`
-pré-compilados da VCL e o build para com `F2051 — Unit X was compiled with a different
-version of Y`. O `Ctrl+F9` não passa por isso.
-
-## Configuração
-
-```jsonc
-{
-  // pastas de .pas a indexar; vazio usa o próprio workspace
-  "delphi4vscode.sourcePaths": [
-    "C:/Program Files (x86)/Embarcadero/Studio/22.0/source/vcl",
-    "C:/Program Files (x86)/Embarcadero/Studio/22.0/source/rtl",
-    "C:/Program Files (x86)/Embarcadero/Studio/22.0/source/data",
-    "vendor/devexpress/product/source"
-  ],
-  // avisar quando o .dfm grava propriedade que a classe não declara
-  "delphi4vscode.validarPropriedades": true
-}
-```
-
-### Componentes sem fonte
-
-Componente comercial costuma vir só compilado. O `.dcu` não ajuda — formato proprietário que
-muda a cada versão —, mas o `.bpl` sim: todo `published` deixa RTTI no binário, e dali saem
-nome da classe, ancestral, unit e as propriedades publicadas. A extensão lê os pacotes da
-pasta `Bpl` e os da instalação, em segundo plano, e usa isso **só para completar** o que o
-índice de fontes não cobriu. Desligue em `delphi4vscode.lerPacotes` se não quiser.
-
-### Como a extensão decide o que desenhar
-
-Em ordem, parando na primeira que responde:
-
-1. **herança** — a cadeia chega a um ancestral conhecido;
-2. **propriedades publicadas** — quem publica `Columns` junto de `DataSource` é uma grade,
-   quem publica `ModalResult` é um botão, tenha o nome que tiver;
-3. **nome** — heurística por substring;
-4. **genérico** — desce a `TWinControl`/`TControl`.
-
-A ordem entre 2 e 3 foi medida contra as classes cujo tipo já se conhece por herança, nos
-1.111 `.dfm` do projeto de referência: a inferência por propriedade acerta **89,5%**, a
-heurística de nome **55,5%**.
-
-Componente que não casa com nada nenhum ainda é desenhado, na posição e no tamanho corretos,
-arrastável e com o inspetor funcionando — o que se perde é só a aparência específica.
-
-O índice é construído uma vez e guardado em cache por conjunto de pastas — abrir um segundo
-projeto não invalida o do primeiro. Um `.pas` salvo é relido sozinho; **Delphi Form:
-reindexar classes dos .pas** força a varredura completa depois de instalar componentes novos.
+---
 
 ## Atalhos
 
-| | |
+| Atalho | O que faz |
 |---|---|
-| botão direito | menu com duplicar, apagar, alinhar, z-order, inserir, reverter herança |
-| arrastar | move, ou reordena dentro de um grupo de layout |
-| arrastar no vazio | laço de seleção |
-| alças (8) | redimensiona por qualquer lado ou canto |
-| alça no canto do form | redimensiona o form; os `Anchors` acompanham |
-| setas / Shift+setas | move 1 px / 8 px |
-| Alt (arrastando) | ignora o encaixe nas guias |
-| Ctrl+clique | seleção múltipla — depois `A` alinha à esquerda, `T` ao topo, `D` distribui |
-| Ctrl+G | grade de fundo |
-| Ctrl+L | trava as posições (seleção e propriedades continuam livres) |
-| Ctrl+`+` / Ctrl+`-` / Ctrl+0 | zoom; Ctrl+roda também |
-| Del / Insert | apaga / abre a paleta |
-| Esc | seleciona o container pai |
-| duplo clique | cria o handler de `OnClick` no `.pas` |
+| `Ctrl+F9` | Compilar |
+| `Shift+F9` | Recompilar tudo |
+| `Ctrl+Shift+F9` | Limpar e reconstruir |
+| `F9` | Executar |
+| `Ctrl+Shift+C` | Completar classe |
+| `Alt+F12` | Alternar entre o designer e o texto do `.dfm` |
 
-Mover o cursor no `.dfm` aberto como texto seleciona o componente no designer, e o contrário
-também vale — dá para deixar os dois lado a lado.
+Os 32 comandos aparecem na paleta com o prefixo **Delphi:**.
 
-## Sem sair do VS Code
+---
 
-| | |
-|---|---|
-| `F9` | executar o programa compilado, num terminal próprio |
-| **Delphi: acrescentar esta unit ao projeto** | põe o `.pas` aberto no `uses` do `.dpr` |
-| **Delphi: remover unit do projeto** | tira do `uses`, cuidando do `;` da última linha |
-| **Delphi: verificar estrutura do projeto** | unit apontando para arquivo que sumiu, `{$R *.dfm}` sem form, unit com nome trocado, entrada repetida |
-| **Delphi: resumo do projeto** | forms, data modules, frames, componentes por classe, e o que o índice não conhece |
-| **Delphi Form: converter binário para texto** | destrava a edição de um `.dfm` binário, guardando o original como `.bin` |
+## Configuração
 
-No código Pascal: **ir para a definição** (classe ou unit do `uses`), **passar entre a
-declaração e a implementação** de um método, **hover** com a herança e as propriedades
-publicadas, e **completar** classes e propriedades. Tudo vem do mesmo índice do designer.
+A extensão descobre sozinha os caminhos de fonte, lendo o Library Path, o Browsing Path, o
+`.dproj` e o workspace. Quase nada precisa ser configurado.
 
-No designer: `Ctrl+C`/`Ctrl+V` copiam e colam componentes **entre forms** — o que vai para a
-área de transferência é o bloco de texto do `.dfm`, então funciona entre janelas e entre
-projetos. `Ctrl+Shift+F` encaixa o form na janela.
+| Configuração | Padrão | Para quê |
+|---|---|---|
+| `delphi4vscode.bdsBinPath` | *(descoberto)* | A pasta `bin` do RAD Studio. Com mais de uma instalação, a extensão pergunta e grava. |
+| `delphi4vscode.buildConfig` | `Debug` | Configuração de build. |
+| `delphi4vscode.buildPlatform` | `Win32` | Plataforma. |
+| `delphi4vscode.lsp.enabled` | `true` | Desligado, o Code Insight volta a ser o índice próprio. |
+| `delphi4vscode.symbols.excluir` | `["vendor", …]` | Pastas fora do Ctrl+T. Código de terceiros costuma ser dois terços dos `.pas` de um projeto grande. |
+| `delphi4vscode.buildScript` | *(vazio)* | Script próprio de build, quando o projeto tem um. |
+| `delphi4vscode.testProject` | *(vazio)* | O `.dproj` dos testes, se não for o projeto ativo. |
 
-## Limitações
+---
 
-- `.dfm` binário abre somente para leitura; para editar, converta para texto.
-- Componente com `Align` que preenche o pai não é arrastável, como no próprio Delphi.
-- O aviso de propriedade inexistente só age quando o índice cobre a cadeia inteira da classe;
-  com a cadeia truncada ele se cala em vez de arriscar um aviso errado.
-- FireMonkey é suportado na geometria (`Position`/`Size`/`Align`) e na edição; estilos e
-  efeitos do FMX não são desenhados.
-- Relatórios FastReport não são suportados.
+## O que ainda não faz
+
+- **Depurar.** Não existe adaptador de depuração oficial da Embarcadero, e o DelphiLSP não
+  depura. Para pôr breakpoint, ainda é a IDE.
+- O `DelphiLSP.exe` estoura sozinho de vez em quando (`Internal server error` num pedido).
+  É defeito do binário da Embarcadero; a extensão registra e cai no índice próprio em vez de
+  mostrar o erro para você.
+- FastReport tem designer próprio e não é desenhado aqui.
+
+O caminho até aqui e o que vem a seguir estão em [`docs/ROADMAP.md`](https://github.com/herlondf/Delphi4VSCode/blob/main/docs/ROADMAP.md).
+
+---
+
+## Como isto é construído
+
+Duas regras que valem para todo o código:
+
+**Nada entra como "funciona" sem ter rodado.** As afirmações deste README foram medidas, não
+supostas. Quando uma pergunta é sobre o Delphi, quem responde é o compilador: as regras de
+diretiva da Class Completion saíram de compilar cada caso com o `dcc32`, e a mensagem de um
+diagnóstico foi reescrita depois que um programa de teste mostrou que a afirmação anterior era
+falsa.
+
+**Toda regra não trivial deixa um teste que falha se ela quebrar.** São 346, e vários nasceram
+de um defeito encontrado ao rodar a extensão contra um projeto real de 342 forms e 810 units —
+onde um diagnóstico chegou a produzir 8.158 avisos falsos antes de virar 3 verdadeiros.
+
+---
+
+MIT.

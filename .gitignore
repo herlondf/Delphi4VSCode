@@ -8,3 +8,7 @@ diag*.js
 
 # configuração de projeto do DelphiLSP: gerada, e cheia de caminhos da máquina
 *.delphilsp.json
+
+# o icone e gerado por tools/gerar-icone.js, mas vai versionado:
+# o vsce precisa dele no pacote e nem todo mundo vai rodar o gerador
+!media/icon.png
