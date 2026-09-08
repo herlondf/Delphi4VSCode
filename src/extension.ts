@@ -19,6 +19,7 @@ import { registrarProjetosView } from './projectsView';
 import { registrarLens } from './lens';
 import { registrarPascalDiagnostics } from './pascalDiag';
 import { registrarDobras } from './dobrar';
+import { registrarPares } from './paresCmd';
 import { registrarPascalNav } from './pascalNav';
 import { registrarProjetoCmd } from './projetoCmd';
 import { registrarExecutar } from './executar';
@@ -146,6 +147,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   registrarPascalDiagnostics(ctx, () => registry);
   registrarPascalNav(ctx, () => registry);
   registrarDobras(ctx);
+  registrarPares(ctx);
   registrarProjetoCmd(ctx, build, () => registry);
   registrarExecutar(ctx, build);
   /*

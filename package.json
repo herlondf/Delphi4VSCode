@@ -253,6 +253,11 @@
       {
         "command": "delphi4vscode.descobrirTestes",
         "title": "Delphi: procurar testes DUnitX"
+      },
+      {
+        "command": "delphi4vscode.alternarDeclaracao",
+        "title": "Delphi: alternar declaração e implementação",
+        "category": "Delphi"
       }
     ],
     "menus": {
@@ -484,6 +489,11 @@
         "command": "delphi4vscode.classCompletion",
         "key": "ctrl+shift+c",
         "when": "editorTextFocus && resourceExtname =~ /\\.(pas|dpr|dpk|inc)/"
+      },
+      {
+        "command": "delphi4vscode.alternarDeclaracao",
+        "key": "ctrl+shift+up",
+        "when": "editorTextFocus && resourceExtname =~ /[.](pas|dpr|inc)/"
       }
     ],
     "grammars": [

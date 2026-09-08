@@ -69,6 +69,7 @@ const ESPERADOS = [
   'delphi4vscode.acrescentarUnit', 'delphi4vscode.removerUnit',
   'delphi4vscode.ativarProjeto', 'delphi4vscode.atualizarProjetos',
   'delphi4vscode.novoForm', 'delphi4vscode.novoFrame', 'delphi4vscode.novoDataModule',
+  'delphi4vscode.alternarDeclaracao',
 ];
 
 test('activate() vai até o fim e registra todos os comandos do manifesto', () => {
