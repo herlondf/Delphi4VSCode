@@ -283,6 +283,11 @@
         "command": "delphi4vscode.limparAuditoria",
         "title": "Delphi: limpar os achados da auditoria",
         "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.renomearUnit",
+        "title": "Delphi: renomear a unit no projeto inteiro",
+        "category": "Delphi"
       }
     ],
     "menus": {

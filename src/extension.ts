@@ -26,6 +26,7 @@ import { registrarExecutar } from './executar';
 import { registrarDepurar } from './depurarCmd';
 import { registrarVerInfo } from './verinfoCmd';
 import { registrarAudits } from './auditsCmd';
+import { registrarRenomear } from './renomearCmd';
 import { registrarLsp } from './lsp/cliente';
 import { registrarNovoProjeto } from './novoProjetoCmd';
 import { registrarFormatador } from './formatar';
@@ -156,6 +157,7 @@ export function activate(ctx: vscode.ExtensionContext): void {
   registrarDepurar(ctx, build, canalLsp(ctx));
   registrarVerInfo(ctx, build);
   registrarAudits(ctx, build, canalLsp(ctx));
+  registrarRenomear(ctx);
   /*
    * O servidor sobe depois de tudo e sem travar a ativação: ele lê o projeto inteiro antes de
    * responder, e o designer não deve ficar esperando por isso. Se não subir, o índice próprio
