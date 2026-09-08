@@ -211,3 +211,31 @@ test('grupo com moldura recua 12 nos lados e 18 no topo, como o look-and-feel pa
   assert.equal(RECUO_GRUPO, 12);
   assert.equal(RECUO_GRUPO_TOPO, 18);
 });
+
+test('Offsets do item é margem: entra no que ele pede e sai da área do conteúdo', () => {
+  const m = medir([
+    'object Form1: TForm1',
+    '  object dxLayoutControl1: TdxLayoutControl',
+    '    object Raiz: TdxLayoutGroup',
+    '      Index = 0',
+    '    end',
+    '    object Ctl: TcxButton',
+    '    end',
+    '    object ItemCtl: TdxLayoutItem',
+    '      Parent = Raiz',
+    '      Offsets.Left = 20',
+    '      Offsets.Top = 5',
+    '      Control = Ctl',
+    '      ControlOptions.OriginalWidth = 75',
+    '      ControlOptions.OriginalHeight = 25',
+    '      CaptionOptions.Visible = False',
+    '      Index = 0',
+    '    end',
+    '  end',
+    'end',
+  ], { x: 0, y: 0, w: 400, h: 200 });
+  // o item ocupa o espaço com a margem; o controle começa depois dela
+  assert.equal(m.get('ItemCtl')!.rect.x, RECUO_RAIZ);
+  assert.equal(m.get('ItemCtl')!.controle!.rect.x, 20);
+  assert.equal(m.get('ItemCtl')!.controle!.rect.y, 5);
+});

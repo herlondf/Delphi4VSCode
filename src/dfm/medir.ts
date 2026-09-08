@@ -137,6 +137,21 @@ function ehClient(valor: string): boolean {
   return valor === 'ahclient' || valor === 'avclient';
 }
 
+/**
+ * `Offsets` do item — margem em volta dele, dentro do espaço que o grupo lhe deu.
+ *
+ * Vale para item e para grupo (ambos herdam de `TdxCustomLayoutItem`), entra no tamanho que
+ * o item pede (`Item.Width + OffsetsWidth`) e sai da área do conteúdo
+ * (`cxRectWidth(OriginalBounds) - OffsetsWidth`). Nos forms de teste são ~300 usos, do
+ * `Offsets.Left = 20` que indenta um rádio ao `Offsets.Bottom = -3` que encosta dois campos.
+ */
+function recuos(n: DfmNode): { l: number; t: number; r: number; b: number } {
+  return {
+    l: num(n, 'offsets.left', 0), t: num(n, 'offsets.top', 0),
+    r: num(n, 'offsets.right', 0), b: num(n, 'offsets.bottom', 0),
+  };
+}
+
 /** O controle que um item posiciona, se houver. */
 function controleDe(info: LayoutInfo): DfmNode | undefined {
   const nome = txt(info.node, 'control', '');
@@ -166,15 +181,18 @@ function tamanhoDoControle(info: LayoutInfo, reg: Registry): { w: number; h: num
 
 /** Tamanho que um item pede, antes de crescer ou dividir espaço. */
 function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
+  const off = recuos(info.node);
+  const mais = (p: { w: number; h: number }): { w: number; h: number } =>
+    ({ w: p.w + off.l + off.r, h: p.h + off.t + off.b });
   if (info.group) {
     const [cap] = layoutCaption(info.node);
     const moldura = flag(info.node, 'showborder') !== false && !!cap;
     if (ehTabbed(info)) {
       const p = info.kids.map(k => pedido(k, reg));
-      return {
+      return mais({
         w: Math.max(0, ...p.map(x => x.w)),
         h: Math.max(0, ...p.map(x => x.h)) + ALTO_ABA,
-      };
+      });
     }
     const horiz = ehHorizontal(info);
     let w = 0;
@@ -186,16 +204,16 @@ function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
     }
     if (info.kids.length) { if (horiz) { w -= GAP; } else { h -= GAP; } }
     if (moldura) { w += RECUO_GRUPO * 2; h += RECUO_GRUPO + RECUO_GRUPO_TOPO; }
-    return { w, h };
+    return mais({ w, h });
   }
 
   const n = info.node;
   const ctl = tamanhoDoControle(info, reg);
   const [cap, pos] = layoutCaption(n);
-  if (!cap) { return ctl; }
-  return pos === 'top' || pos === 'bottom'
+  if (!cap) { return mais(ctl); }
+  return mais(pos === 'top' || pos === 'bottom'
     ? { w: ctl.w, h: ctl.h + ALTO_CAPTION }
-    : { w: ctl.w + cap.length * 6 + LARGURA_CAPTION, h: ctl.h };
+    : { w: ctl.w + cap.length * 6 + LARGURA_CAPTION, h: ctl.h });
 }
 
 /**
@@ -248,28 +266,46 @@ export function medirLayout(
   info: LayoutInfo, reg: Registry, area: Rect, raiz = true,
 ): Medida {
   const medida: Medida = { rect: area, info, filhos: [] };
+  const off = recuos(info.node);
+  /* O retângulo devolvido é o que o grupo reservou; o conteúdo mora dentro dos `Offsets`. */
+  const util: Rect = {
+    x: off.l, y: off.t,
+    w: Math.max(0, area.w - off.l - off.r), h: Math.max(0, area.h - off.t - off.b),
+  };
 
   if (!info.group) {
     const ctl = controleDe(info);
     const [cap, pos] = layoutCaption(info.node);
-    let dentro = { ...area, x: 0, y: 0 };
+    let dentro = { ...util };
     if (cap) {
       const largura = cap.length * 6 + LARGURA_CAPTION;
       if (pos === 'top') {
-        medida.caption = { texto: cap, pos, rect: { x: 0, y: 0, w: area.w, h: ALTO_CAPTION } };
-        dentro = { x: 0, y: ALTO_CAPTION, w: area.w, h: Math.max(0, area.h - ALTO_CAPTION) };
+        medida.caption = {
+          texto: cap, pos, rect: { x: util.x, y: util.y, w: util.w, h: ALTO_CAPTION },
+        };
+        dentro = {
+          x: util.x, y: util.y + ALTO_CAPTION,
+          w: util.w, h: Math.max(0, util.h - ALTO_CAPTION),
+        };
       } else if (pos === 'bottom') {
         medida.caption = {
           texto: cap, pos,
-          rect: { x: 0, y: area.h - ALTO_CAPTION, w: area.w, h: ALTO_CAPTION },
+          rect: { x: util.x, y: util.y + util.h - ALTO_CAPTION, w: util.w, h: ALTO_CAPTION },
         };
-        dentro = { x: 0, y: 0, w: area.w, h: Math.max(0, area.h - ALTO_CAPTION) };
+        dentro = { x: util.x, y: util.y, w: util.w, h: Math.max(0, util.h - ALTO_CAPTION) };
       } else if (pos === 'right') {
-        medida.caption = { texto: cap, pos, rect: { x: area.w - largura, y: 0, w: largura, h: area.h } };
-        dentro = { x: 0, y: 0, w: Math.max(0, area.w - largura), h: area.h };
+        medida.caption = {
+          texto: cap, pos,
+          rect: { x: util.x + util.w - largura, y: util.y, w: largura, h: util.h },
+        };
+        dentro = { x: util.x, y: util.y, w: Math.max(0, util.w - largura), h: util.h };
       } else {
-        medida.caption = { texto: cap, pos: 'left', rect: { x: 0, y: 0, w: largura, h: area.h } };
-        dentro = { x: largura, y: 0, w: Math.max(0, area.w - largura), h: area.h };
+        medida.caption = {
+          texto: cap, pos: 'left', rect: { x: util.x, y: util.y, w: largura, h: util.h },
+        };
+        dentro = {
+          x: util.x + largura, y: util.y, w: Math.max(0, util.w - largura), h: util.h,
+        };
       }
     }
     if (ctl) {
@@ -295,7 +331,7 @@ export function medirLayout(
   if (ehTabbed(info)) {
     medida.abas = info.kids.map(k => layoutCaption(k.node)[0] || k.node.name);
     const pagina: Rect = {
-      x: 0, y: ALTO_ABA, w: area.w, h: Math.max(0, area.h - ALTO_ABA),
+      x: util.x, y: util.y + ALTO_ABA, w: util.w, h: Math.max(0, util.h - ALTO_ABA),
     };
     for (const k of info.kids) { medida.filhos.push(medirLayout(k, reg, pagina, false)); }
     return medida;
@@ -313,9 +349,9 @@ export function medirLayout(
   const lado = (moldura ? RECUO_GRUPO : 0) + raizPad;
   const topo = (moldura ? RECUO_GRUPO_TOPO : 0) + raizPad;
   const interna = {
-    x: lado, y: topo,
-    w: Math.max(0, area.w - lado * 2),
-    h: Math.max(0, area.h - lado - topo),
+    x: util.x + lado, y: util.y + topo,
+    w: Math.max(0, util.w - lado * 2),
+    h: Math.max(0, util.h - lado - topo),
   };
 
   const pedidos = info.kids.map(k => pedido(k, reg));
