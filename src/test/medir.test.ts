@@ -9,9 +9,9 @@ import { Registry } from '../dfm/registry';
 import { parseDfm } from '../dfm/parser';
 import { layoutTree, isLayoutHost, Rect } from '../dfm/layout';
 import {
-  medirLayout, Medida, GAP, RECUO_RAIZ, RECUO_GRUPO, RECUO_GRUPO_TOPO,
+  medirLayout, Medida, GAP, RECUO_RAIZ, RECUO_GRUPO, RECUO_GRUPO_TOPO, recuosDe,
 } from '../dfm/medir';
-import { DfmNode } from '../dfm/model';
+import { DfmNode, walk } from '../dfm/model';
 
 const reg = Registry.fromJSON({
   parents: [
@@ -25,8 +25,13 @@ const reg = Registry.fromJSON({
   ],
 });
 
+/** Idem, com os recuos vindos de um componente de look-and-feel do próprio form. */
+function medirComLnf(linhas: string[], area: Rect, lnf: string): Map<string, Medida> {
+  return medir(linhas, area, lnf);
+}
+
 /** Monta o .dfm, acha o host e devolve as medidas indexadas por nome. */
-function medir(linhas: string[], area: Rect): Map<string, Medida> {
+function medir(linhas: string[], area: Rect, lnf?: string): Map<string, Medida> {
   const doc = parseDfm(linhas.join('\n'), 'x.dfm');
   let host: DfmNode | undefined;
   (function rec(n: DfmNode) {
@@ -38,7 +43,8 @@ function medir(linhas: string[], area: Rect): Map<string, Medida> {
   (function rec(m: Medida) {
     fora.set(m.info.node.name, m);
     m.filhos.forEach(rec);
-  })(medirLayout(tree, reg, area));
+  })(medirLayout(tree, reg, area, true, recuosDe(
+    lnf ? [...walk(doc!)].find(n => n.name === lnf) : undefined)));
   return fora;
 }
 
@@ -238,4 +244,37 @@ test('Offsets do item é margem: entra no que ele pede e sai da área do conteú
   assert.equal(m.get('ItemCtl')!.rect.x, RECUO_RAIZ);
   assert.equal(m.get('ItemCtl')!.controle!.rect.x, 20);
   assert.equal(m.get('ItemCtl')!.controle!.rect.y, 5);
+});
+
+test('LayoutLookAndFeel com margem zerada não recua a raiz', () => {
+  const linhas = (lnf: string): string[] => [
+    'object Form1: TForm1',
+    '  object dxLayoutControl1: TdxLayoutControl',
+    ...lnf ? [`    LayoutLookAndFeel = ${lnf}`] : [],
+    '    object SemMargem: TdxLayoutSkinLookAndFeel',
+    '      Offsets.RootItemsAreaOffsetHorz = 0',
+    '      Offsets.RootItemsAreaOffsetVert = 0',
+    '    end',
+    '    object Raiz: TdxLayoutGroup',
+    '      Index = 0',
+    '    end',
+    '    object Ctl: TcxButton',
+    '    end',
+    '    object ItemCtl: TdxLayoutItem',
+    '      Parent = Raiz',
+    '      Control = Ctl',
+    '      ControlOptions.OriginalWidth = 75',
+    '      ControlOptions.OriginalHeight = 21',
+    '      CaptionOptions.Visible = False',
+    '      Index = 0',
+    '    end',
+    '  end',
+    'end',
+  ];
+  const area = { x: 0, y: 0, w: 400, h: 21 };
+  assert.equal(medir(linhas(''), area).get('ItemCtl')!.rect.y, RECUO_RAIZ);
+  // com a margem zerada o controle cabe; com os 10 padrão sobrava 1px de altura
+  const semMargem = medirComLnf(linhas('SemMargem'), area, 'SemMargem');
+  assert.equal(semMargem.get('ItemCtl')!.rect.y, 0);
+  assert.equal(semMargem.get('ItemCtl')!.controle!.rect.h, 21);
 });

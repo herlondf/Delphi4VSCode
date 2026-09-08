@@ -190,6 +190,40 @@ export function propOf(doc: DfmDocument, node: DfmNode, key: string): Prop | und
   return node.props.get(key) ?? doc.byControl.get(node)?.props.get(key);
 }
 
+/*
+ * O componente de look-and-feel referenciado por `LayoutLookAndFeel`, resolvido.
+ *
+ * A referência tem duas formas: um nome solto, que é um componente do próprio form, e
+ * `Modulo.Nome`, que aponta para um data module — e é aí que moram os compartilhados. O
+ * módulo é uma instância global, então a classe dele é o nome com `T` na frente; é a
+ * convenção que o próprio designer gera ao criar o data module.
+ */
+const lnfCache = new Map<string, DfmNode | undefined>();
+
+export function lookAndFeelDe(
+  doc: DfmDocument, node: DfmNode, reg: Registry,
+): DfmNode | undefined {
+  const ref = txt(node, 'layoutlookandfeel', '').trim();
+  if (!ref) { return undefined; }
+  const ponto = ref.indexOf('.');
+  if (ponto < 0) { return doc.byName.get(ref); }
+
+  const modulo = ref.slice(0, ponto);
+  const nome = ref.slice(ponto + 1);
+  if (lnfCache.has(ref)) { return lnfCache.get(ref); }
+  let achado: DfmNode | undefined;
+  const unit = reg.unitOf(`T${modulo}`);
+  const dfm = unit?.replace(/\.pas$/i, '.dfm');
+  if (dfm && fs.existsSync(dfm)) {
+    try {
+      const raiz = parseDfm(readDfmText(dfm).text, dfm);
+      if (raiz) { for (const n of walk(raiz)) { if (n.name === nome) { achado = n; break; } } }
+    } catch { achado = undefined; }
+  }
+  lnfCache.set(ref, achado);
+  return achado;
+}
+
 export function frameDfmOf(reg: Registry, cls: string): string | undefined {
   const unit = reg.unitOf(cls);
   if (!unit) { return undefined; }

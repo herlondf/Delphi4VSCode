@@ -8,12 +8,12 @@
 
 import { DfmNode, num, txt, flag, unquote, stripAccel, walk } from './model';
 import { Registry, Kind } from './registry';
-import { DfmDocument } from './document';
+import { DfmDocument, lookAndFeelDe } from './document';
 import {
   Rect, place, visualKids, layoutTree, insetCliente,
   layoutCaption, isLayoutHost, inLayout, movable,
 } from './layout';
-import { Medida, medirLayout } from './medir';
+import { Medida, medirLayout, recuosDe } from './medir';
 
 export interface RenderOptions {
   /** Recalcular o layout do dxLayoutControl em vez de usar as coordenadas gravadas. */
@@ -573,7 +573,10 @@ class Painter {
     const tree = this.opts.flexLayout && isLayoutHost(n, this.reg)
       ? layoutTree(n, this.reg) : null;
     if (tree) {
-      this.layout(medirLayout(tree, this.reg, { x: 0, y: 0, w: rect.w, h: rect.h }), font, true);
+      this.layout(
+        medirLayout(tree, this.reg, { x: 0, y: 0, w: rect.w, h: rect.h }, true,
+          recuosDe(lookAndFeelDe(this.doc, n, this.reg))),
+        font, true);
       this.out.push('</div>');
       return;
     }

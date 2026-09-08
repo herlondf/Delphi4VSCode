@@ -64,6 +64,41 @@ function vdlu(unidades: number): number {
 export const GAP = dlu(4);
 /** Recuo da área de itens do grupo RAIZ (`RootItemsAreaOffset`, 7 DLU). */
 export const RECUO_RAIZ = dlu(7);
+
+/**
+ * Os recuos valem por `LayoutLookAndFeel`, não por instalação.
+ *
+ * `TdxLayoutLookAndFeelOffsets` é publicado, e um form pode zerar a margem da raiz — é o que
+ * um look-and-feel chamado "SemMargem" faz nos forms de teste, e sem ler isso um container de
+ * 21px de altura saía com o conteúdo de 1px, porque os 10 de recuo comiam os dois lados.
+ */
+export interface Recuos {
+  gap: number;
+  raizH: number;
+  raizV: number;
+  areaH: number;
+  areaV: number;
+}
+
+export const RECUOS_PADRAO: Recuos = {
+  gap: GAP, raizH: RECUO_RAIZ, raizV: RECUO_RAIZ, areaH: 0, areaV: 0,
+};
+
+/** Lê `Offsets.*` do componente de look-and-feel; o que ele não disser fica no padrão. */
+export function recuosDe(lnf: DfmNode | undefined): Recuos {
+  if (!lnf) { return RECUOS_PADRAO; }
+  const em = (chave: string, padrao: number): number => {
+    const p = num(lnf, `offsets.${chave}`, NaN);
+    return Number.isNaN(p) ? padrao : dlu(p);
+  };
+  return {
+    gap: em('itemoffset', GAP),
+    raizH: em('rootitemsareaoffsethorz', RECUO_RAIZ),
+    raizV: em('rootitemsareaoffsetvert', RECUO_RAIZ),
+    areaH: em('itemsareaoffsethorz', 0),
+    areaV: em('itemsareaoffsetvert', 0),
+  };
+}
 /** Recuo do controle dentro do item (`ControlOffset`, 3 DLU). */
 export const RECUO_CONTROLE = dlu(3);
 /*
@@ -180,7 +215,7 @@ function tamanhoDoControle(info: LayoutInfo, reg: Registry): { w: number; h: num
 }
 
 /** Tamanho que um item pede, antes de crescer ou dividir espaço. */
-function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
+function pedido(info: LayoutInfo, reg: Registry, rec: Recuos): { w: number; h: number } {
   const off = recuos(info.node);
   const mais = (p: { w: number; h: number }): { w: number; h: number } =>
     ({ w: p.w + off.l + off.r, h: p.h + off.t + off.b });
@@ -188,7 +223,7 @@ function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
     const [cap] = layoutCaption(info.node);
     const moldura = flag(info.node, 'showborder') !== false && !!cap;
     if (ehTabbed(info)) {
-      const p = info.kids.map(k => pedido(k, reg));
+      const p = info.kids.map(k => pedido(k, reg, rec));
       return mais({
         w: Math.max(0, ...p.map(x => x.w)),
         h: Math.max(0, ...p.map(x => x.h)) + ALTO_ABA,
@@ -198,11 +233,11 @@ function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
     let w = 0;
     let h = 0;
     for (const k of info.kids) {
-      const p = pedido(k, reg);
-      if (horiz) { w += p.w + GAP; h = Math.max(h, p.h); }
-      else { h += p.h + GAP; w = Math.max(w, p.w); }
+      const p = pedido(k, reg, rec);
+      if (horiz) { w += p.w + rec.gap; h = Math.max(h, p.h); }
+      else { h += p.h + rec.gap; w = Math.max(w, p.w); }
     }
-    if (info.kids.length) { if (horiz) { w -= GAP; } else { h -= GAP; } }
+    if (info.kids.length) { if (horiz) { w -= rec.gap; } else { h -= rec.gap; } }
     if (moldura) { w += RECUO_GRUPO * 2; h += RECUO_GRUPO + RECUO_GRUPO_TOPO; }
     return mais({ w, h });
   }
@@ -229,7 +264,7 @@ function pedido(info: LayoutInfo, reg: Registry): { w: number; h: number } {
  */
 function distribuir(
   filhos: LayoutInfo[], pedidos: { w: number; h: number }[], disponivel: number,
-  horiz: boolean,
+  horiz: boolean, gap: number,
 ): number[] {
   const eixo = (p: { w: number; h: number }): number => (horiz ? p.w : p.h);
   const clientes: number[] = [];
@@ -239,7 +274,7 @@ function distribuir(
     if (ehClient(horiz ? a.h : a.v)) { clientes.push(i); }
     else { fixo += eixo(pedidos[i]); }
   });
-  const gaps = Math.max(0, filhos.length - 1) * GAP;
+  const gaps = Math.max(0, filhos.length - 1) * gap;
   const sobra = Math.max(0, disponivel - fixo - gaps);
 
   /*
@@ -263,7 +298,7 @@ function distribuir(
 
 /** Percorre a árvore e devolve o retângulo de tudo, já resolvido. */
 export function medirLayout(
-  info: LayoutInfo, reg: Registry, area: Rect, raiz = true,
+  info: LayoutInfo, reg: Registry, area: Rect, raiz = true, rec: Recuos = RECUOS_PADRAO,
 ): Medida {
   const medida: Medida = { rect: area, info, filhos: [] };
   const off = recuos(info.node);
@@ -333,7 +368,7 @@ export function medirLayout(
     const pagina: Rect = {
       x: util.x, y: util.y + ALTO_ABA, w: util.w, h: Math.max(0, util.h - ALTO_ABA),
     };
-    for (const k of info.kids) { medida.filhos.push(medirLayout(k, reg, pagina, false)); }
+    for (const k of info.kids) { medida.filhos.push(medirLayout(k, reg, pagina, false, rec)); }
     return medida;
   }
 
@@ -345,17 +380,19 @@ export function medirLayout(
    * diálogo, 10px na fonte padrão. Grupo interno tem `ItemsAreaOffset` zero; o que ele
    * eventualmente recua é a moldura que desenha quando tem rótulo, não espaçamento.
    */
-  const raizPad = raiz ? RECUO_RAIZ : 0;
-  const lado = (moldura ? RECUO_GRUPO : 0) + raizPad;
-  const topo = (moldura ? RECUO_GRUPO_TOPO : 0) + raizPad;
+  const ladoRaiz = raiz ? rec.raizH : rec.areaH;
+  const topoRaiz = raiz ? rec.raizV : rec.areaV;
+  const lado = (moldura ? RECUO_GRUPO : 0) + ladoRaiz;
+  const topo = (moldura ? RECUO_GRUPO_TOPO : 0) + topoRaiz;
   const interna = {
     x: util.x + lado, y: util.y + topo,
     w: Math.max(0, util.w - lado * 2),
-    h: Math.max(0, util.h - lado - topo),
+    h: Math.max(0, util.h - topo - (moldura ? RECUO_GRUPO : 0) - topoRaiz),
   };
 
-  const pedidos = info.kids.map(k => pedido(k, reg));
-  const principal = distribuir(info.kids, pedidos, horiz ? interna.w : interna.h, horiz);
+  const pedidos = info.kids.map(k => pedido(k, reg, rec));
+  const principal = distribuir(
+    info.kids, pedidos, horiz ? interna.w : interna.h, horiz, rec.gap);
 
   /*
    * No eixo principal o grupo tem duas âncoras, não uma: `ahLeft`/`avTop` empacotam a partir
@@ -372,13 +409,13 @@ export function medirLayout(
     if (principalDele !== 'ahright' && principalDele !== 'avbottom') { continue; }
     fimCursor -= principal[i];
     offsets[i] = fimCursor;
-    fimCursor -= GAP;
+    fimCursor -= rec.gap;
   }
   let cursor = inicio;
   info.kids.forEach((k, i) => {
     if (offsets[i] !== undefined) { return; }
     offsets[i] = cursor;
-    cursor += principal[i] + GAP;
+    cursor += principal[i] + rec.gap;
   });
 
   info.kids.forEach((k, i) => {
@@ -398,7 +435,7 @@ export function medirLayout(
     const filhoArea: Rect = horiz
       ? { x: offsets[i], y: offCruzado, w: principal[i], h: tamCruzado }
       : { x: offCruzado, y: offsets[i], w: tamCruzado, h: principal[i] };
-    medida.filhos.push(medirLayout(k, reg, filhoArea, false));
+    medida.filhos.push(medirLayout(k, reg, filhoArea, false, rec));
   });
   return medida;
 }
