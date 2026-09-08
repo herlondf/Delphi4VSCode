@@ -142,13 +142,22 @@ export class Registry {
 
   get size(): number { return this.parents.size; }
 
-  /** Varre pastas de `.pas` e registra `filha -> ancestral`. Não seguem links nem histórico. */
-  scan(roots: string[], budgetMs = 20000): void {
+  /**
+   * Varre pastas de `.pas` e registra `filha -> ancestral`. Não segue link nem histórico.
+   *
+   * Devolve se a varredura TERMINOU, e isso não é detalhe: o orçamento de tempo corta no meio
+   * e quem chama não tinha como saber. Índice pela metade grava no cache como se fosse
+   * completo, e daí em diante o designer abre forms sem componente — `isVisual` recusa a
+   * classe que não foi indexada. Medido nas 9 pastas do projeto de teste: a varredura inteira
+   * dá 25.448 classes em ~14 s; com a máquina ocupada, o corte em 20 s deixou 12.034.
+   */
+  scan(roots: string[], budgetMs = 60000): { completo: boolean } {
     const deadline = Date.now() + budgetMs;
     for (const root of roots) {
       this.scanDir(root, deadline);
     }
     this.chainCache.clear();
+    return { completo: Date.now() <= deadline };
   }
 
   private scanDir(dir: string, deadline: number): void {

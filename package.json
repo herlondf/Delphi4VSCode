@@ -2,7 +2,7 @@
   "name": "delphi4vscode",
   "displayName": "Delphi4VSCode",
   "description": "Delphi no VS Code: designer de forms, Code Insight do compilador, build e projeto — sem abrir a IDE.",
-  "version": "0.27.0",
+  "version": "0.27.1",
   "publisher": "herlondf",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -491,6 +491,12 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Caminho do `AuditsCLI.exe`. Ele vem no RAD Studio 11 (`22.0`) em diante; vazio procura em todas as instalações."
+        },
+        "delphi4vscode.indexBudgetMs": {
+          "type": "number",
+          "default": 60000,
+          "minimum": 5000,
+          "markdownDescription": "Tempo máximo da varredura de classes, em milissegundos. A varredura para sozinha quando termina — o limite só existe para não travar a ativação num caminho de rede lento. Índice cortado não é gravado no cache, e a extensão avisa: componente não indexado não é desenhado no designer."
         }
       }
     },

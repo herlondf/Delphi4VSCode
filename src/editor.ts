@@ -437,7 +437,37 @@ export class DfmEditorProvider implements vscode.CustomTextEditorProvider {
       stats, binary: doc.binary,
       structure: structureOf(doc, reg),
     });
+    this.avisarSeVazio(doc, reg, stats.visuais);
   }
+
+  /**
+   * Form com filhos e nenhum componente desenhado quer dizer índice vazio, não form vazio.
+   *
+   * Sem classe indexada, `isVisual` recusa todo mundo e o designer abre só a moldura — que na
+   * tela parece um form em branco, sem nada explicando. Falha muda é a pior: o usuário conclui
+   * que o designer quebrou. Aqui ela vira uma frase e um botão.
+   */
+  private avisarSeVazio(doc: DfmDocument, reg: Registry, visuais: number): void {
+    if (visuais > 0 || !doc.root.kids.length || this.avisouVazio) { return; }
+    this.avisouVazio = true;
+    const semIndice = reg.size === 0;
+    void vscode.window.showWarningMessage(
+      semIndice
+        ? 'O índice de componentes está vazio, por isso o form abriu sem nada. ' +
+          'Ele é montado a partir do search path do projeto ativo.'
+        : `Nenhum dos ${doc.root.kids.length} componentes deste form foi reconhecido como ` +
+          'visual. Reindexar costuma resolver.',
+      'Reindexar', 'Escolher o projeto ativo',
+    ).then(acao => {
+      if (acao === 'Reindexar') { void vscode.commands.executeCommand('delphi4vscode.reindex'); }
+      if (acao === 'Escolher o projeto ativo') {
+        void vscode.commands.executeCommand('delphi4vscode.selecionarProjeto');
+      }
+    });
+  }
+
+  /** Uma vez por sessão: o aviso é diagnóstico, não alarme a cada abertura de form. */
+  private avisouVazio = false;
 
   private async handle(
     msg: WebMsg, document: vscode.TextDocument, panel: vscode.WebviewPanel,

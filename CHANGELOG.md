@@ -3,6 +3,22 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.27.1
+
+- **Correção: form abrindo sem nenhum componente.** A varredura de classes tinha limite de 20
+  segundos e cortava no meio sem avisar; o índice pela metade ia para o cache como se
+  estivesse inteiro e voltava assim em toda sessão. Como o designer só desenha classe
+  indexada, o form abria com a moldura e mais nada. Um cache real desta máquina tinha 12.034
+  classes onde cabiam 25.448.
+  - varredura interrompida agora **não é gravada** e a extensão diz o que houve;
+  - índice vazio deixa de ser cache válido;
+  - o limite virou configuração (`delphi4vscode.indexBudgetMs`, 60 s), e a varredura para
+    sozinha quando termina — nas pastas de teste leva ~14 s;
+  - todos os caches já gravados são descartados uma vez, porque não há como olhar um deles e
+    saber se está inteiro;
+  - e se ainda assim um form abrir sem componentes, agora aparece o motivo e um botão de
+    reindexar, em vez de uma tela em branco.
+
 ## 0.27.0
 
 - **Depuração.** Era o teto declarado do projeto e deixou de ser. F5 compila com map

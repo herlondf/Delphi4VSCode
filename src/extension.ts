@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { migrarConfiguracoes } from './migrar';
 import { Registry } from './dfm/registry';
+import { conteudoDoCache, lerCache } from './dfm/cache';
 import { decodeBinaryDfm, isBinaryDfm } from './dfm/binary';
 import { DfmEditorProvider } from './editor';
 import { DfmSymbolProvider } from './diagnostics';
@@ -47,7 +48,6 @@ import * as crypto from 'crypto';
  * janelas ficavam reindexando uma contra a outra. O nome carrega o hash das raízes: cada
  * combinação tem o seu, e janelas com as mesmas pastas compartilham o mesmo arquivo.
  */
-const CACHE_VERSION = 3;   // 2: nome declarado; 3: propriedades por classe (C04)
 
 let registry = new Registry();
 /** O projeto ativo entra na descoberta de fontes: é dele que sai o search path. */
@@ -260,26 +260,25 @@ function sourceRoots(): string[] {
 
 async function loadIndex(ctx: vscode.ExtensionContext): Promise<void> {
   const roots = sourceRoots();
+  let texto = '';
   try {
-    const raw = JSON.parse(fs.readFileSync(cachePath(ctx, roots), 'utf8'));
-    if (raw.version === CACHE_VERSION && sameRoots(raw.roots, roots)) {
-      registry = Registry.fromJSON(raw.data);
-      return;
-    }
+    texto = fs.readFileSync(cachePath(ctx, roots), 'utf8');
   } catch { /* sem cache: constrói */ }
+  const cacheado = texto ? lerCache(texto, roots) : undefined;
+  if (cacheado) {
+    registry = cacheado;
+    return;
+  }
   await buildIndex(ctx, false);
 }
 
 function gravarCache(ctx: vscode.ExtensionContext, roots: string[]): void {
+  const conteudo = conteudoDoCache(registry, roots);
+  if (!conteudo) { return; }
   try {
     fs.mkdirSync(ctx.globalStorageUri.fsPath, { recursive: true });
-    fs.writeFileSync(cachePath(ctx, roots),
-      JSON.stringify({ version: CACHE_VERSION, roots, data: registry.toJSON() }));
+    fs.writeFileSync(cachePath(ctx, roots), conteudo);
   } catch { /* cache é otimização, não requisito */ }
-}
-
-function sameRoots(a: unknown, b: string[]): boolean {
-  return Array.isArray(a) && a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
 async function buildIndex(ctx: vscode.ExtensionContext, explicito: boolean): Promise<void> {
@@ -291,14 +290,38 @@ async function buildIndex(ctx: vscode.ExtensionContext, explicito: boolean): Pro
     }
     return;
   }
+  let completo = true;
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window, title: 'Indexando classes Delphi...' },
     async () => {
       const reg = new Registry();
-      reg.scan(roots);
+      const orcamento = vscode.workspace.getConfiguration('delphi4vscode')
+        .get<number>('indexBudgetMs', 60000);
+      completo = reg.scan(roots, orcamento).completo;
       registry = reg;
-      gravarCache(ctx, roots);
+      /*
+       * Índice cortado NÃO vai para o cache.
+       *
+       * Gravado, ele volta em toda sessão como se estivesse inteiro, e o designer abre forms
+       * sem componente para sempre — que é exatamente o que aconteceu com um cache de 12.034
+       * classes onde cabiam 25.448.
+       */
+      if (completo) { gravarCache(ctx, roots); }
     });
+  if (!completo) {
+    void vscode.window.showWarningMessage(
+      `A indexação foi interrompida pelo tempo limite: ${registry.size} classes até aqui. ` +
+      'Componente não indexado não é desenhado no designer. Aumente ' +
+      'delphi4vscode.indexBudgetMs e reindexe.',
+      'Reindexar', 'Abrir a configuração',
+    ).then(acao => {
+      if (acao === 'Reindexar') { void buildIndex(ctx, true); }
+      if (acao === 'Abrir a configuração') {
+        void vscode.commands.executeCommand(
+          'workbench.action.openSettings', 'delphi4vscode.indexBudgetMs');
+      }
+    });
+  }
   void indexarPacotes(ctx, explicito);
   if (explicito) {
     const d = descobrir();
