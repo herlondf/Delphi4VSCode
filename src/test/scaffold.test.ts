@@ -121,7 +121,7 @@ test('registra a unit no .dpr no formato que o Delphi escreve', () => {
 
 test('data module recebe a marca própria no .dpr', () => {
   const novo = aplicar(DPR, registrarNoDpr(DPR, 'Dados', 'Dados.pas', 'DmDados', 'datamodule'));
-  assert.match(novo, /Dados in 'Vendas\.pas' \{DmDados: TDataModule\};/, novo);
+  assert.match(novo, /Dados in 'Dados\.pas' \{DmDados: TDataModule\};/, novo);
 });
 
 test('unit já registrada não entra duas vezes', () => {

@@ -29,7 +29,7 @@ const CHAVES = [
  * O projeto ativo NÃO vem junto, e não é esquecimento.
  *
  * `workspaceState` é isolado por id de extensão: `app.delphi4vscode` não enxerga o que
- * `app.dfmview` guardou, e não existe API para isso. A primeira versão desta migração
+ * a anterior guardou, e não existe API para isso. A primeira versão desta migração
  * tentava — lia a própria caixa vazia procurando a chave antiga, não achava nada, e dava tudo
  * por migrado.
  *

@@ -159,7 +159,7 @@ Medido, não estimado:
 Rename aplicado nas 206 ocorrências: `name`, `displayName`, os 29 comandos, as 15
 configurações, os keybindings e o editor customizado. `src/migrar.ts` traz o que estava em
 `dfmview.*` na primeira ativação, sem sobrescrever o que já tiver sido ajustado no nome novo,
-e roda uma vez só. A extensão antiga (`app.dfmview`) foi desinstalada — id novo significa as
+e roda uma vez só. A extensão antiga (a anterior) foi desinstalada — id novo significa as
 duas ativas ao mesmo tempo, brigando pelo editor de `.dfm`.
 
 Falta: mover os scripts soltos para `sandbox/` e pôr o repositório sob git.

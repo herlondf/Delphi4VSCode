@@ -16,7 +16,7 @@ import { comandoBuild, scriptBuild } from '../dfm/project';
 const CRLF = String.fromCharCode(13, 10);
 const ASPA = String.fromCharCode(34);
 const RSVARS = String.raw`C:\Program Files (x86)\Embarcadero\Studio\37.0\bin\rsvars.bat`;
-const DPROJ = String.raw`d:\Projetos\projeto de teste\app-desktop\app\delphi\App.dproj`;
+const DPROJ = String.raw`d:\Projetos\Exemplo\app-desktop\app\delphi\App.dproj`;
 
 test('o script carrega o ambiente antes de compilar', () => {
   const bat = scriptBuild(RSVARS, DPROJ, 'Build', 'Debug', 'Win32');

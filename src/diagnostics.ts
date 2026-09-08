@@ -15,7 +15,7 @@ import { place, visualKids } from './dfm/layout';
  *
  * Saem do próprio mecanismo de streaming (`DefineProperties`) ou do designer, e cobrá-las
  * daria aviso em quase todo form. A lista é fechada e foi levantada medindo: sobre os 1.111
- * `.dfm` do projeto de referência mais as fontes da VCL e do DevExpress, com ela o aviso cai
+ * `.dfm` do projeto de teste mais as fontes da VCL e do DevExpress, com ela o aviso cai
  * a 0,00% dos 8.106 valores verificados nos forms do próprio projeto.
  *
  * `OldCreateOrder` fica de fora de propósito. Ela não existe mais no `TForm` desde o 10.4, e

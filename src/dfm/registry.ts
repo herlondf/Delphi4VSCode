@@ -290,7 +290,7 @@ export class Registry {
    * Dá para cobrar propriedade desta classe?
    *
    * Três condições, e todas ganharam sua razão de ser medindo em cima dos 1.111 `.dfm` do
-   * projeto de referência:
+   * projeto de teste:
    *
    *  - a cadeia precisa alcançar `TComponent`, senão faltam ancestrais no índice;
    *  - `TComponent` precisa conhecer `Name` e `Tag`. É o canário: as duas estão declaradas

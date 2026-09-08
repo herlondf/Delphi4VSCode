@@ -136,9 +136,9 @@ test('o script do projeto expande os marcadores', () => {
 });
 
 test('o .bat entra no diretório antes de chamar o script', () => {
-  const s = scriptProprio('ci\build_debug.bat App', 'D:\Projetos\projeto de teste');
+  const s = scriptProprio('ci\build_debug.bat App', 'D:\Projetos\Exemplo');
   const linhas = s.split(String.fromCharCode(13, 10));
-  assert.equal(linhas[2], 'cd /d "D:\Projetos\projeto de teste"');
+  assert.equal(linhas[2], 'cd /d "D:\Projetos\Exemplo"');
   assert.ok(linhas.indexOf('ci\build_debug.bat App') > 2, s);
   assert.ok(s.includes('exit /b %errorlevel%'), 'o erro do script tem de chegar na task');
 });
