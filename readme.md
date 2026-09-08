@@ -41,11 +41,15 @@ Requer o RAD Studio instalado. Testado no **Delphi 11 (22.0)** e no **Delphi 10.
 
 ### Designer de forms
 
+O objetivo é o mesmo da IDE: **desenhar o form com os componentes que ele tem**, sejam quais
+forem — não uma lista de componentes suportados.
+
 | | |
 |---|---|
-| **Renderiza `.dfm` e `.fmx`** | Resolve a herança dos componentes pelos `.pas` do projeto: um `TcxGrid` desenha como grade, não como caixa cinza. Lê também os BPLs instalados para conhecer componente que só existe como `.dcu`. |
+| **Qualquer componente** | A família de cada um sai da cadeia de herança e das propriedades que ele publica, nessa ordem; o nome é o último recurso. Um controle que publica `Columns` junto de um `DataSource` desenha como grade, tenha o nome que tiver e venha de quem vier — inclusive de um fabricante que a extensão nunca viu. |
+| **Componente sem fonte** | O índice não vem só dos `.pas`: o RTTI dos BPLs instalados também entra, então componente que existe apenas como `.dcu` é reconhecido igual. |
 | **Herança visual e frames** | `inherited Form1: TForm1` e `inline Frame1: TFrame1` carregam o arquivo de origem e mesclam os overrides. |
-| **`TdxLayoutControl`** | O layout é **calculado**, não lido das coordenadas gravadas — reordenar e redimensionar têm efeito visível. |
+| **Layout calculado** | Container que reposiciona os filhos em tempo de execução tem o layout **recalculado**, e não lido das coordenadas gravadas — que são só o retrato da última vez que a IDE desenhou. É o que faz reordenar e redimensionar terem efeito visível. |
 | **Edita** | Arrastar, redimensionar, inspetor de propriedades, paleta com busca, copiar e colar entre forms. Toda edição é um `WorkspaceEdit`: o Ctrl+Z é o do VS Code e o save é seu. |
 | **Sincroniza com o `.pas`** | Criar componente declara o campo na classe; apagar remove. |
 | **`.dfm` binário** | Lê o formato TPF0 e converte para texto quando você pedir. |
@@ -111,7 +115,6 @@ A extensão descobre sozinha os caminhos de fonte, lendo o Library Path, o Brows
 - O `DelphiLSP.exe` estoura sozinho de vez em quando (`Internal server error` num pedido).
   É defeito do binário da Embarcadero; a extensão registra e cai no índice próprio em vez de
   mostrar o erro para você.
-- FastReport tem designer próprio e não é desenhado aqui.
 
 O caminho até aqui e o que vem a seguir estão em [`docs/ROADMAP.md`](https://github.com/herlondf/Delphi4VSCode/blob/main/docs/ROADMAP.md).
 

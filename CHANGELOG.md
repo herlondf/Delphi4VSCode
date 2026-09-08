@@ -30,9 +30,10 @@ detalhe técnico está nas mensagens de commit.
 Publicadas como **dfmview / Delphi Form Designer**. O nome mudou quando o escopo deixou de ser
 só o designer de `.dfm`.
 
-- Designer visual de `.dfm` e `.fmx`, com herança de componentes resolvida pelos `.pas` e pelos
-  BPLs instalados.
-- Layout do `TdxLayoutControl` calculado em vez de lido das coordenadas gravadas.
+- Designer visual de `.dfm` e `.fmx`, com a família de cada componente resolvida pela herança
+  e pelas propriedades publicadas — dos `.pas` do projeto e do RTTI dos BPLs instalados.
+- Container que reposiciona os filhos em tempo de execução tem o layout calculado, em vez de
+  lido das coordenadas gravadas.
 - Build por MSBuild com Debug/Release, executar, e gestão de units no `.dpr`.
 - Leitura de `.dfm` binário (TPF0) e conversão para texto.
 

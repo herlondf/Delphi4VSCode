@@ -320,7 +320,7 @@ O `Registry` indexa **classes e propriedades**. Não indexa método, função li
 | Lacuna | Tamanho medido no projeto de teste |
 |---|---|
 | `TcxVerticalGrid` / `TcxCategoryRow` / `TcxEditorRow` | 138 objetos em 13 forms |
-| FastReport (`Tfrx*`) | 4.235 objetos em 23 forms — é um designer à parte, não um controle de form |
+| ~~FastReport (`Tfrx*`)~~ | **Não é lacuna.** O componente de relatório é não visual e já aparece como ícone, igual à IDE; o conteúdo do relatório tem designer próprio e não é desenhado no form nem lá |
 | Criar componente no designer não declara o campo no `.pas` | todo componente novo |
 
 ### 6.5 Fluxo e qualidade
@@ -350,5 +350,4 @@ O `Registry` indexa **classes e propriedades**. Não indexa método, função li
 - **`brcc32`/`cgrc`** para ícone e version info no executável — não sondados.
 - **`GetItCmd.exe`** para instalar componentes sem a IDE — ajuda confirmada, não integrado.
 - **`reFind.exe`** para renomear unit no projeto inteiro — ajuda confirmada, não integrado.
-- **FastReport** no designer: 4.235 objetos em 23 forms do projeto de teste, mas é um designer à parte, não um controle de form.
 - **`AuditsCLI`** como comando sob demanda, aceitando os 15+ min num projeto grande.
