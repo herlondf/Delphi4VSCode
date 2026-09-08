@@ -3,6 +3,12 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.27.3
+
+- Cache de índice de versão antiga é apagado sozinho ao gravar o novo. Cada subida do formato
+  deixava o arquivo anterior para trás, e ele não é pequeno — o do projeto de teste passa de
+  19 MB. Cache de outras pastas, na versão corrente, fica: é de outra janela.
+
 ## 0.27.2
 
 - **O índice passa a carregar num `finally`.** Ele era a última linha da ativação, então

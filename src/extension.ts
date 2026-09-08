@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { migrarConfiguracoes } from './migrar';
 import { Registry } from './dfm/registry';
-import { conteudoDoCache, lerCache } from './dfm/cache';
+import { conteudoDoCache, ehCacheObsoleto, lerCache } from './dfm/cache';
 import { copiasInstaladas } from './dfm/copias';
 import { decodeBinaryDfm, isBinaryDfm } from './dfm/binary';
 import { DfmEditorProvider } from './editor';
@@ -331,7 +331,38 @@ function gravarCache(ctx: vscode.ExtensionContext, roots: string[]): void {
   try {
     fs.mkdirSync(ctx.globalStorageUri.fsPath, { recursive: true });
     fs.writeFileSync(cachePath(ctx, roots), conteudo);
+    limparCachesMortos(ctx);
   } catch { /* cache é otimização, não requisito */ }
+}
+
+/**
+ * Apaga cache de versão que não se lê mais.
+ *
+ * Cada subida de `CACHE_VERSION` deixa o arquivo anterior para trás, e ele não é pequeno: o
+ * do projeto de teste passa de 19 MB. Sem isto eles se acumulam para sempre, um por versão e
+ * por conjunto de pastas.
+ *
+ * Só o cabeçalho de cada arquivo é lido — abrir 19 MB para conferir um número seria absurdo.
+ */
+function limparCachesMortos(ctx: vscode.ExtensionContext): void {
+  const dir = ctx.globalStorageUri.fsPath;
+  let nomes: string[];
+  try {
+    nomes = fs.readdirSync(dir).filter(n => /^registry-.*\.json$/.test(n));
+  } catch { return; }
+  for (const nome of nomes) {
+    const alvo = path.join(dir, nome);
+    let inicio = '';
+    try {
+      const buf = Buffer.alloc(200);
+      const fd = fs.openSync(alvo, 'r');
+      try { inicio = buf.subarray(0, fs.readSync(fd, buf, 0, 200, 0)).toString('utf8'); }
+      finally { fs.closeSync(fd); }
+    } catch { continue; }
+    if (ehCacheObsoleto(inicio)) {
+      try { fs.rmSync(alvo, { force: true }); } catch { /* na próxima vez */ }
+    }
+  }
 }
 
 async function buildIndex(ctx: vscode.ExtensionContext, explicito: boolean): Promise<void> {

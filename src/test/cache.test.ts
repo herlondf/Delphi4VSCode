@@ -8,7 +8,9 @@
 
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { CACHE_VERSION, conteudoDoCache, lerCache, mesmasRaizes } from '../dfm/cache';
+import {
+  CACHE_VERSION, conteudoDoCache, ehCacheObsoleto, lerCache, mesmasRaizes,
+} from '../dfm/cache';
 import { Registry } from '../dfm/registry';
 
 const RAIZES = ['C:/a', 'C:/b'];
@@ -59,4 +61,26 @@ test('comparação de raízes é por conteúdo e ordem', () => {
   assert.equal(mesmasRaizes(['b', 'a'], ['a', 'b']), false);
   assert.equal(mesmasRaizes('a,b', ['a', 'b']), false);
   assert.equal(mesmasRaizes(undefined, []), false);
+});
+
+test('cache de versão antiga é lixo: ninguém volta a lê-lo', () => {
+  assert.equal(ehCacheObsoleto('{"version":' + (CACHE_VERSION - 1) + ',"roots":[]'), true);
+  assert.equal(ehCacheObsoleto('{"version":' + CACHE_VERSION + ',"roots":[]'), false);
+});
+
+test('cabeçalho ilegível também é lixo, e não estoura', () => {
+  assert.equal(ehCacheObsoleto(''), true);
+  assert.equal(ehCacheObsoleto('{lixo'), true);
+});
+
+test('a decisão sai do começo do arquivo — um cache passa de 19 MB', () => {
+  const inteiro = conteudoDoCache(cheio(), RAIZES)!;
+  assert.equal(ehCacheObsoleto(inteiro.slice(0, 200)), false,
+    'ler 200 bytes tem de bastar; abrir o arquivo todo para conferir um número seria absurdo');
+});
+
+test('só a versão decide — cache de outras pastas, na versão corrente, fica', () => {
+  const deOutraJanela = conteudoDoCache(cheio(), ['C:/outro/projeto'])!;
+  assert.equal(ehCacheObsoleto(deOutraJanela.slice(0, 200)), false,
+    'apagá-lo faria duas janelas do usuário reindexarem uma contra a outra');
 });

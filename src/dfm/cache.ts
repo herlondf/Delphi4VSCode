@@ -55,3 +55,18 @@ export function conteudoDoCache(reg: Registry, roots: string[]): string | undefi
   if (reg.size === 0) { return undefined; }
   return JSON.stringify({ version: CACHE_VERSION, roots, data: reg.toJSON() });
 }
+
+/**
+ * Arquivo de cache que nenhuma versão volta a ler — é lixo e pode sair.
+ *
+ * Recebe só o COMEÇO do arquivo: um cache passa de 19 MB, e ler tudo para conferir um número
+ * no cabeçalho é desperdício. Versão diferente da corrente nunca mais será aceita; ilegível
+ * também não.
+ *
+ * Só a versão decide. Cache de OUTRO conjunto de pastas, na versão corrente, é de outra
+ * janela do usuário e tem de ficar — apagá-lo faria as duas reindexarem uma contra a outra.
+ */
+export function ehCacheObsoleto(inicio: string): boolean {
+  const m = /"version"\s*:\s*(\d+)/.exec(inicio);
+  return !m || Number(m[1]) !== CACHE_VERSION;
+}
