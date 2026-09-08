@@ -258,6 +258,11 @@
         "command": "delphi4vscode.alternarDeclaracao",
         "title": "Delphi: alternar declaração e implementação",
         "category": "Delphi"
+      },
+      {
+        "command": "delphi4vscode.depurar",
+        "title": "Delphi: depurar (compila, gera símbolos e sobe o depurador)",
+        "category": "Delphi"
       }
     ],
     "menus": {
@@ -451,6 +456,11 @@
           "type": "string",
           "default": "",
           "description": "Caminho do .dproj do projeto de testes DUnitX. Vazio usa o projeto ativo."
+        },
+        "delphi4vscode.debug.map2pdb": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Caminho do `map2pdb.exe`. O Delphi não gera PDB, e é o PDB que qualquer depurador do Windows lê; o [map2pdb](https://github.com/andersmelander/map2pdb) converte o `.map` detalhado. Vazio: procura no workspace."
         }
       }
     },
@@ -482,7 +492,7 @@
       },
       {
         "command": "delphi4vscode.rodar",
-        "key": "f9",
+        "key": "ctrl+f5",
         "when": "workspaceFolderCount > 0 && !inDebugMode"
       },
       {
@@ -494,6 +504,11 @@
         "command": "delphi4vscode.alternarDeclaracao",
         "key": "ctrl+shift+up",
         "when": "editorTextFocus && resourceExtname =~ /[.](pas|dpr|inc)/"
+      },
+      {
+        "command": "delphi4vscode.depurar",
+        "key": "f5",
+        "when": "workspaceFolderCount > 0 && !inDebugMode"
       }
     ],
     "grammars": [

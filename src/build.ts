@@ -319,6 +319,14 @@ export class BuildManager {
   private temporario: { config: string; plataforma: string } | undefined;
 
   /** Ponto de entrada dos comandos: nada aqui pode terminar sem o usuário saber por quê. */
+  /**
+   * Propriedades MSBuild extras só para a próxima compilação.
+   *
+   * É como a depuração pede o map detalhado sem mexer no `.dproj` do usuário: um
+   * `/p:DCC_MapFile=3` na linha de comando vale para aquele build e não deixa rastro.
+   */
+  extras: Record<string, string> = {};
+
   async executar(alvo: Alvo): Promise<void> {
     try {
       await this.executarInterno(alvo);
@@ -361,7 +369,7 @@ export class BuildManager {
     this.log(`rsvars: ${rs}`);
     const { config, plataforma, verbosidade } = this.opcoes();
     await this.rodar(p, alvo,
-      scriptBuild(rs, p.fsPath, alvo, config, plataforma, verbosidade));
+      scriptBuild(rs, p.fsPath, alvo, config, plataforma, verbosidade, this.extras));
   }
 
   /*

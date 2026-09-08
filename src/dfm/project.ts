@@ -112,15 +112,16 @@ const JOIN = String.fromCharCode(13, 10);
  */
 export function scriptBuild(
   rsvars: string, dproj: string, alvo: string, config: string, plataforma: string,
-  verbosidade = 'minimal',
+  verbosidade = 'minimal', extras: Record<string, string> = {},
 ): string {
+  const mais = Object.entries(extras).map(([k, v]) => ` /p:${k}=${v}`).join('');
   return [
     '@echo off',
     'setlocal',
     `call "${rsvars}"`,
     'if errorlevel 1 (echo Falha ao carregar o ambiente do Delphi ^(rsvars.bat^) & exit /b 1)',
     `msbuild "${dproj}" /t:${alvo} /p:Config=${config} /p:Platform=${plataforma}` +
-      ` /nologo /v:${verbosidade}`,
+      `${mais} /nologo /v:${verbosidade}`,
     'exit /b %errorlevel%',
   ].join(JOIN) + JOIN;
 }
