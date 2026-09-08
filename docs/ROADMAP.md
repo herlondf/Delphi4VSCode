@@ -300,11 +300,11 @@ A instalação traz **89 executáveis** em `bin`. Os que valem, sondados:
 
 | Binário | O que abre | Estado |
 |---|---|---|
-| `AuditsCLI.exe` | Linter e métricas em XML (severidade, arquivo, linha; complexidade, LOC, acoplamento). | **Medido e adiado.** Roda e gera os XML, mas levou **mais de 15 min sem terminar** no projeto de 874 units — inviável como diagnóstico ao vivo. Serve como comando sob demanda ou para projeto pequeno. |
-| `brcc32.exe` / `cgrc.exe` | Compila `.rc` → `.res`. É o que põe **ícone e version info** no executável. | Não sondado |
-| `GetItCmd.exe` | Instala e desinstala componentes do GetIt pela linha de comando. | Ajuda confirmada |
-| `reFind.exe` | Busca e substituição PCRE em massa, com `.bak`. É a ferramenta que a IDE usa para renomear unit no projeto. | Ajuda confirmada |
-| `rmtdbg270.exe`, `paclient.exe` | Depurador remoto e Platform Assistant. | **Sondado, e fecha a porta por ora.** O nome no roadmap estava errado — é `rmtdbg270`, não `280`. Ele não tem CLI: `-?` devolve os próprios argumentos ecoados, porque é o **servidor** a que o depurador da IDE se conecta, por protocolo proprietário. `paclient.exe` responde e exige perfil. Um adaptador de depuração para o VS Code exigiria reimplementar esse protocolo — é possível prometer investigação, não prazo. |
+| `AuditsCLI.exe` | Linter e métricas em XML. | **Integrado como comando sob demanda.** Duas correções ao que estava aqui: ele **não existe em toda instalação** (nesta máquina só na 22.0, e não na que compila o projeto), por isso é procurado em todas; e não tem modo por arquivo, só projeto inteiro — daí os 15+ min. Vai com progresso e cancelamento, e o XML aninha achados relacionados, que viram `relatedInformation`. |
+| `brcc32.exe` / `cgrc.exe` | Compila `.rc` → `.res`. | **Sondados, e não são o caminho.** Os dois rodam, mas só entram quando existe um `.rc` escrito à mão; no fluxo normal o MSBuild já compila o recurso a partir do `.dproj`. O que faltava fora da IDE era EDITAR ícone e version info — feito, sem eles. |
+| `GetItCmd.exe` | Instala e desinstala componentes do GetIt pela linha de comando. | **Sondado e descartado.** `--list` responde, mas o catálogo está fora do ar nas quatro instalações desta máquina (19.0, 21.0, 22.0, 37.0): `"\Api\Catalog\Info_.json" metadata file does not exist`. Sem catálogo não há o que instalar, e instalar pacote na IDE é efeito colateral pesado para um editor. |
+| `reFind.exe` | Busca e substituição PCRE em massa, com `.bak`. | **Sondado, e preterido de propósito.** Funciona, mas edita por fora do editor, espalha `.bak` e não dá prévia nem desfazer. O renomear unit foi feito com `WorkspaceEdit`, que dá as três coisas. |
+| `rmtdbg270.exe`, `paclient.exe` | Depurador remoto e Platform Assistant. | **Beco sem saída — mas a depuração saiu por outro caminho, ver abaixo.** O nome no roadmap estava errado — é `rmtdbg270`, não `280`. Ele não tem CLI: `-?` devolve os próprios argumentos ecoados, porque é o **servidor** a que o depurador da IDE se conecta, por protocolo proprietário. `paclient.exe` responde e exige perfil. Um adaptador de depuração para o VS Code exigiria reimplementar esse protocolo — é possível prometer investigação, não prazo. |
 | `tlibimp.exe`, `GenTLB.exe`, `WSDLImp.exe` | Importadores de type library e WSDL. | Não sondados |
 | `convert.exe` | `.dfm` binário ↔ texto. Já temos o nosso; serve de conferência. | Ajuda confirmada |
 
@@ -346,9 +346,12 @@ O `Registry` indexa **classes e propriedades**. Não indexa método, função li
 
 ### 6.7 O que continua em aberto
 
-- **Depuração.** Sondada: `rmtdbg270.exe` é servidor sem linha de comando, e o protocolo com o depurador da IDE é proprietário. Continua sendo o teto do projeto, agora com o motivo medido.
+- ~~**Depuração.**~~ **Feita.** O `rmtdbg270` é de fato um beco sem saída — servidor sem CLI, protocolo proprietário. O caminho é outro: `DCC_MapFile=3` → `map2pdb` → PDB → `cppvsdbg`. Verificado ponta a ponta com o `cdb.exe` do Windows Kits antes de virar código: breakpoint por linha de Pascal para, e a pilha vem com arquivo, linha e parâmetros. Depende de um binário de terceiros (`map2pdb`, código aberto, escrito em Delphi) que não vai embutido.
 - **O `+17` do rodapé.** Em 77 controles, todos no mesmo grupo de rodapé, o grupo reserva 42px onde o conteúdo tem 25. A causa não foi achada na fonte do componente — `Hidden` só suprime a borda (`dxLayoutContainer.pas:21991`) e o grupo segue visível com filhos (`:22473`), então o item oculto participa mesmo.
-- **`brcc32`/`cgrc`** para ícone e version info no executável — não sondados.
-- **`GetItCmd.exe`** para instalar componentes sem a IDE — ajuda confirmada, não integrado.
-- **`reFind.exe`** para renomear unit no projeto inteiro — ajuda confirmada, não integrado.
-- **`AuditsCLI`** como comando sob demanda, aceitando os 15+ min num projeto grande.
+- ~~`brcc32`/`cgrc`~~, ~~`reFind.exe`~~, ~~`AuditsCLI`~~ — resolvidos, dois deles por outro caminho que não o previsto aqui (ver a tabela acima).
+- **`GetItCmd.exe`** — descartado: catálogo fora do ar nas quatro instalações.
+- **Depuração em Linux.** O compilador Linux64 do Delphi emite ELF com DWARF, o que abriria
+  `gdb` pelo adaptador `cppdbg` sem depender de conversor nenhum. Não sondado.
+- **Variáveis com nome de campo do Delphi no depurador.** O PDB gerado do map traz símbolo e
+  linha; o que ele não traz é o TIPO, então o watch mostra memória, não `TStringList`. Um
+  `.natvis` para os tipos da RTL é o próximo passo natural.

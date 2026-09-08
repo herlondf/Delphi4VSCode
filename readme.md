@@ -37,6 +37,10 @@ Requer o RAD Studio instalado. Testado no **Delphi 11 (22.0)** e no **Delphi 10.
 | **Class Completion** (`Ctrl+Shift+C`) | Declarei o método na classe, gera o corpo em `implementation`. As regras de qual diretiva se repete no corpo vieram de perguntar ao `dcc32` caso a caso — `overload`, por exemplo, **não** se repete. |
 | **Ctrl+Shift+↑** | Alterna entre a declaração do método na classe e o corpo em `implementation`, como na IDE. Não depende do índice nem do servidor: o par mora no mesmo arquivo. |
 | **Dobrar código** | Seções da unit, blocos, declarações de tipo, `{$REGION}` e comentário de bloco. O `foldingRange` não existe no DelphiLSP, e o dobramento por indentação do VS Code não serve para Pascal — `begin` e `end` ficam na mesma coluna do `procedure`. |
+| **Depurar** (`F5`) | Compila com map detalhado, gera os símbolos e sobe o depurador: breakpoint, pilha, passo a passo, por linha de Pascal. O `rmtdbg` da instalação não serve — é servidor de protocolo proprietário; o caminho é `DCC_MapFile=3` → `map2pdb` → PDB → `cppvsdbg`. Precisa da extensão C/C++ da Microsoft e do [map2pdb](https://github.com/andersmelander/map2pdb), que é código aberto escrito em Delphi. |
+| **Renomear unit** | Arquivo, `.dfm`, cabeçalho, todos os `uses`, o `.dpr` e o `.dproj` numa edição só, que um Ctrl+Z desfaz. Uso qualificado ambíguo é listado, não trocado. |
+| **Auditoria** | O `AuditsCLI` da instalação, sob demanda, com progresso e cancelamento. Analisa projeto inteiro — não há modo por arquivo, e num projeto grande passa de 15 min. |
+| **Ícone e versão** | A página Application/Version Info das opções do projeto, sem abrir a IDE. |
 | **Formatação** | Pelo `Formatter.exe` da instalação, com o seu `Formatter.config`. O mesmo resultado do `Ctrl+D` da IDE. |
 | **Quick fix de `uses`** | No `E2003 Undeclared identifier`, oferece acrescentar a unit que declara o símbolo. |
 | **Snippets** | 16 de Object Pascal, com `try..finally` e fixture DUnitX. |

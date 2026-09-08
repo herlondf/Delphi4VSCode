@@ -3,6 +3,24 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.27.0
+
+- **Depuração.** Era o teto declarado do projeto e deixou de ser. F5 compila com map
+  detalhado, gera os símbolos e sobe o depurador; breakpoint, pilha, variáveis e passo a
+  passo, por linha de Pascal. Precisa da extensão C/C++ da Microsoft (só o motor de
+  depuração) e do conversor `map2pdb`, que é código aberto escrito em Delphi — a extensão diz
+  o que falta e onde pegar.
+- **Atalhos mudam junto:** `F5` depura, `Ctrl+F5` roda sem depurar, e o **`F9` volta a ser
+  alternar breakpoint**. F9 rodando o programa era aceitável enquanto não havia como pôr
+  breakpoint.
+- **Ícone e informações de versão** do executável, sem abrir as opções do projeto:
+  incrementar o build, digitar a versão, editar `CompanyName` e companhia, trocar o `.ico`.
+- **Auditoria do projeto** pelo `AuditsCLI` da instalação, sob demanda, com progresso e
+  cancelamento — os achados vão para o painel Problems, com os locais relacionados ligados.
+- **Renomear unit** no projeto inteiro: o arquivo, o `.dfm`, o cabeçalho, todos os `uses`, o
+  `.dpr` e o `.dproj` numa edição só, que um Ctrl+Z desfaz. Uso qualificado ambíguo
+  (`X.Algo`, que pode ser uma variável de mesmo nome) é listado, não trocado.
+
 ## 0.26.0
 
 - **Espaçamento do designer conferido contra a fonte do componente.** Os recuos do container
