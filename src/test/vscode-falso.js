@@ -60,6 +60,7 @@ const vscode = {
     registerReferenceProvider: () => disp,
     createDiagnosticCollection: () => ({ set: noop, delete: noop, clear: noop, dispose: noop }),
     registerDocumentSymbolProvider: () => disp,
+    registerFoldingRangeProvider: () => disp,
     registerCodeLensProvider: () => disp,
     registerDefinitionProvider: () => disp,
     registerHoverProvider: () => disp,
