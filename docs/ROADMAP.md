@@ -304,7 +304,7 @@ A instalação traz **89 executáveis** em `bin`. Os que valem, sondados:
 | `brcc32.exe` / `cgrc.exe` | Compila `.rc` → `.res`. É o que põe **ícone e version info** no executável. | Não sondado |
 | `GetItCmd.exe` | Instala e desinstala componentes do GetIt pela linha de comando. | Ajuda confirmada |
 | `reFind.exe` | Busca e substituição PCRE em massa, com `.bak`. É a ferramenta que a IDE usa para renomear unit no projeto. | Ajuda confirmada |
-| `rmtdbg280.exe`, `paclient.exe` | Depurador remoto e Platform Assistant. É o teto declarado do projeto — vale **investigar**, não prometer. | Não sondado |
+| `rmtdbg270.exe`, `paclient.exe` | Depurador remoto e Platform Assistant. | **Sondado, e fecha a porta por ora.** O nome no roadmap estava errado — é `rmtdbg270`, não `280`. Ele não tem CLI: `-?` devolve os próprios argumentos ecoados, porque é o **servidor** a que o depurador da IDE se conecta, por protocolo proprietário. `paclient.exe` responde e exige perfil. Um adaptador de depuração para o VS Code exigiria reimplementar esse protocolo — é possível prometer investigação, não prazo. |
 | `tlibimp.exe`, `GenTLB.exe`, `WSDLImp.exe` | Importadores de type library e WSDL. | Não sondados |
 | `convert.exe` | `.dfm` binário ↔ texto. Já temos o nosso; serve de conferência. | Ajuda confirmada |
 
@@ -346,7 +346,8 @@ O `Registry` indexa **classes e propriedades**. Não indexa método, função li
 
 ### 6.7 O que continua em aberto
 
-- **Depuração.** `rmtdbg280.exe` e `paclient.exe` estão na instalação e não foram sondados. É o teto declarado do projeto.
+- **Depuração.** Sondada: `rmtdbg270.exe` é servidor sem linha de comando, e o protocolo com o depurador da IDE é proprietário. Continua sendo o teto do projeto, agora com o motivo medido.
+- **O `+17` do rodapé.** Em 77 controles, todos no mesmo grupo de rodapé, o grupo reserva 42px onde o conteúdo tem 25. A causa não foi achada na fonte do componente — `Hidden` só suprime a borda (`dxLayoutContainer.pas:21991`) e o grupo segue visível com filhos (`:22473`), então o item oculto participa mesmo.
 - **`brcc32`/`cgrc`** para ícone e version info no executável — não sondados.
 - **`GetItCmd.exe`** para instalar componentes sem a IDE — ajuda confirmada, não integrado.
 - **`reFind.exe`** para renomear unit no projeto inteiro — ajuda confirmada, não integrado.

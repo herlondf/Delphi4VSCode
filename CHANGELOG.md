@@ -3,6 +3,24 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.26.0
+
+- **Espaçamento do designer conferido contra a fonte do componente.** Os recuos do container
+  de layout eram palpite; agora saem de `GetGroupBorderWidth` e `DLUToPixels`, e os recuos de
+  cada form saem do `LayoutLookAndFeel` que ele referencia — inclusive quando esse componente
+  mora num data module. Medido contra o que a IDE gravou, em 647 controles: posição exata em
+  x subiu de 48% para 63%, em y de 52% para 67%, largura de 65% para 80%, altura para 92%.
+- **`Offsets` de cada item do layout** passam a valer — é a margem que indenta um rádio sob o
+  que ele qualifica, ou encosta dois campos.
+- Um container de layout baixo saía com o conteúdo de 1px, porque o recuo padrão comia os dois
+  lados. Caixas degeneradas nos 642 forms de teste: 285 antes, 56 agora — e as que sobram são
+  bevel e splitter de verdade.
+- **Dobrar código** (`foldingRange`), que o DelphiLSP não oferece: seções da unit, blocos,
+  declarações de tipo, `{$REGION}` e comentário de bloco. O dobramento por indentação do VS
+  Code não servia, porque `begin` e `end` ficam na mesma coluna do `procedure`.
+- **`Ctrl+Shift+↑` alterna declaração e implementação**, como na IDE. Só em arquivo Pascal;
+  quem preferir o cursor-acima original troca em Keyboard Shortcuts.
+
 ## 0.25.0
 
 - **Code Insight do compilador.** O `DelphiLSP.exe` da instalação passa a atender autocompletar,
