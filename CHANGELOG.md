@@ -3,6 +3,17 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.27.4
+
+- **Cenário de depuração pronto** em `samples/depuracao`: um projeto de 50 linhas com um método
+  onde o breakpoint faz sentido, e um README com o que funciona e o que não. Serve para conferir
+  a instalação sem depender de um projeto grande.
+- A depuração foi verificada ponta a ponta pelo caminho que a extensão usa de fato — MSBuild com
+  `/p:DCC_MapFile=3`, conversão do `.map`, e parada num método de classe com arquivo e linha na
+  pilha. Antes só o compilador direto tinha sido testado.
+- Fica registrado o limite: **variável local por nome não aparece**. O PDB vem do `.map`, que
+  tem endereço, nome público e linha — não tem tipo nem local.
+
 ## 0.27.3
 
 - Cache de índice de versão antiga é apagado sozinho ao gravar o novo. Cada subida do formato

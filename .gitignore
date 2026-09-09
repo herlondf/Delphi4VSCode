@@ -9,6 +9,20 @@ diag*.js
 # configuração de projeto do DelphiLSP: gerada, e cheia de caminhos da máquina
 *.delphilsp.json
 
+# saída de compilação dos samples: o fonte e o .dproj vão versionados, o resto não.
+# o .pdb entra aqui porque é gerado do .map a cada build, não é artefato de fonte.
+*.exe
+*.map
+*.pdb
+*.dcu
+*.drc
+*.res
+*.identcache
+*.local
+*.dproj.local
+__history/
+__recovery/
+
 # o icone e gerado por tools/gerar-icone.js, mas vai versionado:
 # o vsce precisa dele no pacote e nem todo mundo vai rodar o gerador
 !media/icon.png

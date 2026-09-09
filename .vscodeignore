@@ -6,6 +6,7 @@ tsconfig.json
 crosscheck-ts.json
 sandbox/**
 docs/**
+samples/**
 
 # node_modules NÃO entra aqui inteiro.
 #
@@ -21,5 +22,6 @@ node_modules/**/*.map
 node_modules/**/*.ts
 node_modules/**/.github/**
 node_modules/**/docs/**
+samples/**
 node_modules/**/test/**
 node_modules/**/tests/**

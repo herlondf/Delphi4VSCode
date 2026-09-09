@@ -352,6 +352,8 @@ O `Registry` indexa **classes e propriedades**. Não indexa método, função li
 - **`GetItCmd.exe`** — descartado: catálogo fora do ar nas quatro instalações.
 - **Depuração em Linux.** O compilador Linux64 do Delphi emite ELF com DWARF, o que abriria
   `gdb` pelo adaptador `cppdbg` sem depender de conversor nenhum. Não sondado.
-- **Variáveis com nome de campo do Delphi no depurador.** O PDB gerado do map traz símbolo e
-  linha; o que ele não traz é o TIPO, então o watch mostra memória, não `TStringList`. Um
-  `.natvis` para os tipos da RTL é o próximo passo natural.
+- **Variável local por nome no depurador.** Confirmado na prática, não só em teoria: o `dv` do
+  cdb responde `Private symbols (symbols.pri) are required for locals`. O PDB é construído do
+  `.map`, que tem endereço, nome público e número de linha — não tem tipo nem local. Breakpoint,
+  passo a passo e pilha com arquivo/linha funcionam; `Watch` por nome não. Um `.natvis` com os
+  tipos da RTL é o caminho.
