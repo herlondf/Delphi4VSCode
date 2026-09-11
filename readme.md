@@ -3,7 +3,15 @@
 **Escrever, desenhar, compilar e rodar Delphi sem abrir a IDE.**
 
 Autocompletar vindo do compilador de verdade, designer visual de `.dfm`, build por MSBuild,
-testes DUnitX no Test Explorer e scaffolding de projeto — dentro do VS Code.
+depuração com breakpoint, testes DUnitX no Test Explorer e scaffolding de projeto — dentro do
+VS Code.
+
+![O designer abrindo um .dfm](docs/img/designer.png)
+
+<sub>Saída real do designer sobre
+[`samples/designer/CadastroDemo.dfm`](samples/designer/CadastroDemo.dfm) — mesmo render e mesmo
+CSS da webview, gerada por `tools/gerar-prints.js`. Os painéis de Estrutura e Propriedades
+ficaram fora porque são preenchidos em tempo de execução.</sub>
 
 ---
 
@@ -80,6 +88,18 @@ forem — não uma lista de componentes suportados.
 Se o autocompletar não responder, o item de status diz por quê, e o canal
 **Delphi Code Insight** (`Ctrl+Shift+U`) mostra o que o servidor carregou.
 
+### Para depurar, mais duas peças
+
+Nenhuma das duas vai embutida, e a extensão diz o que falta quando falta:
+
+| | |
+|---|---|
+| Extensão **C/C++** da Microsoft | só o motor `cppvsdbg`; o Code Insight continua sendo o do Delphi |
+| [**map2pdb**](https://github.com/andersmelander/map2pdb) | o Delphi não gera PDB, e é o PDB que qualquer depurador do Windows lê. É código aberto escrito em Delphi, então compila com o compilador que você já tem. Aponte o `.exe` em `delphi4vscode.debug.map2pdb`. |
+
+[`samples/depuracao`](samples/depuracao) é um projeto de 50 linhas para conferir isso sem
+depender de um projeto grande.
+
 ---
 
 ## Atalhos
@@ -89,11 +109,17 @@ Se o autocompletar não responder, o item de status diz por quê, e o canal
 | `Ctrl+F9` | Compilar |
 | `Shift+F9` | Recompilar tudo |
 | `Ctrl+Shift+F9` | Limpar e reconstruir |
-| `F9` | Executar |
+| `F5` | Depurar |
+| `Ctrl+F5` | Executar sem depurar |
+| `F9` | Alternar breakpoint — o do próprio VS Code |
 | `Ctrl+Shift+C` | Completar classe |
+| `Ctrl+Shift+↑` | Alternar entre a declaração do método e o corpo |
 | `Alt+F12` | Alternar entre o designer e o texto do `.dfm` |
 
-Os 32 comandos aparecem na paleta com o prefixo **Delphi:**.
+Os 39 comandos aparecem na paleta com o prefixo **Delphi:**.
+
+O `F9` executando o programa fazia sentido enquanto não havia como depurar; agora seria roubar
+a tecla de que a depuração mais depende.
 
 ---
 
@@ -116,8 +142,10 @@ A extensão descobre sozinha os caminhos de fonte, lendo o Library Path, o Brows
 
 ## O que ainda não faz
 
-- **Depurar.** Não existe adaptador de depuração oficial da Embarcadero, e o DelphiLSP não
-  depura. Para pôr breakpoint, ainda é a IDE.
+- **Ver variável local por nome no depurador.** Breakpoint, passo a passo e pilha com arquivo
+  e linha funcionam; `Watch` por nome, não. O PDB é construído do `.map`, que tem endereço,
+  nome público e número de linha — e não tem tipo nem variável local. O depurador diz isso com
+  todas as letras: `Private symbols (symbols.pri) are required for locals`.
 - O `DelphiLSP.exe` estoura sozinho de vez em quando (`Internal server error` num pedido).
   É defeito do binário da Embarcadero; a extensão registra e cai no índice próprio em vez de
   mostrar o erro para você.
@@ -136,7 +164,7 @@ diretiva da Class Completion saíram de compilar cada caso com o `dcc32`, e a me
 diagnóstico foi reescrita depois que um programa de teste mostrou que a afirmação anterior era
 falsa.
 
-**Toda regra não trivial deixa um teste que falha se ela quebrar.** São 346, e vários nasceram
+**Toda regra não trivial deixa um teste que falha se ela quebrar.** São 416, e vários nasceram
 de um defeito encontrado ao rodar a extensão contra um projeto real de 342 forms e 810 units —
 onde um diagnóstico chegou a produzir 8.158 avisos falsos antes de virar 3 verdadeiros.
 

@@ -3,6 +3,14 @@
 O VS Code mostra este arquivo na aba da extensão. Só o que muda para quem usa fica aqui; o
 detalhe técnico está nas mensagens de commit.
 
+## 0.28.0
+
+- **Três correções de fidelidade no designer**, todas encontradas ao montar a imagem do README:
+  `TGroupBox` desenhava o rótulo centrado como se fosse um `TPanel`; rádio e caixa marcados
+  apareciam vazios, escondendo qual era a opção padrão; e `Lines.Strings` de um `TMemo` perdia
+  a quebra de linha, emendando as linhas num texto só.
+- README com imagem do designer e a seção de depuração.
+
 ## 0.27.4
 
 - **Cenário de depuração pronto** em `samples/depuracao`: um projeto de 50 linhas com um método
