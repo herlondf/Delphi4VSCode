@@ -140,6 +140,21 @@ function fontCss(f: Font, inherited: Font): string[] {
 }
 
 /** Texto que o componente mostra: próprio, ou o da Action ligada a ele. */
+/**
+ * O conteúdo de `Lines.Strings` e `Items.Strings`, com as quebras de linha preservadas.
+ *
+ * O `.dfm` guarda esses dois como lista de literais entre parênteses, um por linha. O `txt`
+ * comum emenda tudo num string só — o que num `TMemo` produzia "…o NCMantes de emitir" —,
+ * e num campo de uma linha isso nem aparece. Aqui cada literal vira uma linha de verdade.
+ */
+function linhasDe(n: DfmNode): string {
+  const p = n.props.get('lines.strings') ?? n.props.get('items.strings');
+  if (!p) { return ''; }
+  return [...p.raw.matchAll(/'((?:[^']|'')*)'/g)]
+    .map(m => m[1].replace(/''/g, "'"))
+    .join(String.fromCharCode(10));
+}
+
 function captionOf(node: DfmNode, doc: DfmDocument): string {
   let cap = txt(node, 'caption') || txt(node, 'text');
   if (!cap && node.props.has('action')) {
@@ -487,6 +502,25 @@ class Painter {
     }
 
     const cls = ['c', kind];
+    /*
+     * GroupBox e RadioGroup são família `panel`, mas não se DESENHAM como painel: o rótulo
+     * deles fica no alto, à esquerda, recortando a moldura — e não centrado no meio, que é o
+     * do `TPanel`. Sem separar os dois, o rótulo aparecia flutuando no centro do quadro, por
+     * cima do conteúdo.
+     */
+    // o MESMO critério de `insetCliente`: quem reserva o espaço do rótulo e quem o desenha
+    // têm de concordar, senão o texto cai fora da faixa que foi reservada para ele
+    if (/groupbox|radiogroup/i.test(n.cls)) { cls.push('gb'); }
+    /*
+     * Marcado é informação do form, não enfeite: um grupo de rádios desenhado todo vazio não
+     * diz qual opção é a padrão, que é metade do que se quer ver ao abrir a tela. `TCheckBox`
+     * grava `State = cbChecked` além de `Checked`, e os dois valem.
+     */
+    if (kind === 'chk') {
+      if (/radio/i.test(n.cls)) { cls.push('rad'); }
+      const estado = txt(n, 'state', '').toLowerCase();
+      if (flag(n, 'checked') === true || estado === 'cbchecked') { cls.push('on'); }
+    }
     if (flag(n, 'visible') === false) { cls.push('invis'); }
     if (flag(n, 'default') === true) { cls.push('is-default'); }
     if (flag(n, 'cancel') === true) { cls.push('is-cancel'); }
@@ -560,7 +594,9 @@ class Painter {
     }
 
     const cap = tabIndex === undefined ? captionOf(n, this.doc) : '';
+    const multi = cap ? '' : linhasDe(n);
     if (cap) { this.out.push(`<span class="cap">${esc(cap)}</span>`); }
+    else if (multi) { this.out.push(`<span class="cap ml">${esc(multi)}</span>`); }
     else if (['edit', 'lbl', 'grid'].includes(kind)) {
       const df = dataField(n);
       if (df) { this.out.push(`<span class="cap ph">${esc(df)}</span>`); }

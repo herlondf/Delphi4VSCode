@@ -195,3 +195,100 @@ test('o modo layout não quebra o HTML nem perde componentes', () => {
   assert.equal(conta(normal, '<div'), conta(normal, '</div>'));
   assert.ok(conta(normal, 'data-path=') >= 4);
 });
+
+/*
+ * Os três abaixo saíram de olhar uma captura do designer, não de ler o código. Cada um era
+ * uma diferença visível entre o que a IDE desenha e o que a extensão desenhava.
+ */
+
+const FIDELIDADE = `object Form1: TForm1
+  ClientWidth = 400
+  ClientHeight = 300
+  object GroupBoxSituacao: TGroupBox
+    Left = 8
+    Top = 8
+    Width = 200
+    Height = 90
+    Caption = 'Situacao'
+    object RadioAtivo: TRadioButton
+      Left = 12
+      Top = 24
+      Width = 100
+      Height = 17
+      Caption = 'Ativo'
+      Checked = True
+    end
+    object RadioInativo: TRadioButton
+      Left = 12
+      Top = 45
+      Width = 100
+      Height = 17
+      Caption = 'Inativo'
+    end
+    object CheckEstoque: TCheckBox
+      Left = 12
+      Top = 66
+      Width = 120
+      Height = 17
+      Caption = 'Controla estoque'
+      State = cbChecked
+    end
+  end
+  object MemoObs: TMemo
+    Left = 220
+    Top = 8
+    Width = 170
+    Height = 90
+    Lines.Strings = (
+      'primeira linha'
+      'segunda linha')
+  end
+end
+`;
+
+const regFid = Registry.fromJSON({
+  parents: [
+    ['tform1', 'tform'], ['tform', 'twincontrol'],
+    ['tgroupbox', 'tcustomgroupbox'], ['tcustomgroupbox', 'tcustomcontrol'],
+    ['tradiobutton', 'tbuttoncontrol'], ['tcheckbox', 'tbuttoncontrol'],
+    ['tbuttoncontrol', 'twincontrol'],
+    ['tmemo', 'tcustommemo'], ['tcustommemo', 'tcustomedit'], ['tcustomedit', 'twincontrol'],
+    ['tcustomcontrol', 'twincontrol'], ['twincontrol', 'tcontrol'], ['tcontrol', 'tcomponent'],
+  ],
+});
+
+function renderFid(): string {
+  return renderForm(new DfmDocument('/tmp/Fid.dfm', FIDELIDADE, regFid), regFid, {
+    flexLayout: false, nonce: 'N0NCE', cssUri: 'webview.css', jsUri: 'webview.js',
+    paletaUri: 'palette.js', inspetorUri: 'inspector.js', dialogosUri: 'dialogs.js',
+  }).html;
+}
+
+test('GroupBox não se desenha como painel: o rótulo dele vai no alto', () => {
+  const html = renderFid();
+  const div = /<div[^>]*data-name="GroupBoxSituacao"[^>]*>/.exec(html)![0];
+  assert.match(div, /class="[^"]*\bgb\b/,
+    'sem a classe, o CSS de painel centraliza o rótulo no meio do quadro');
+});
+
+test('marcado é desenhado: rádio e caixa levam a classe de estado', () => {
+  const html = renderFid();
+  const ativo = /<div[^>]*data-name="RadioAtivo"[^>]*>/.exec(html)![0];
+  const inativo = /<div[^>]*data-name="RadioInativo"[^>]*>/.exec(html)![0];
+  const estoque = /<div[^>]*data-name="CheckEstoque"[^>]*>/.exec(html)![0];
+  assert.match(ativo, /\bon\b/, 'Checked = True');
+  assert.doesNotMatch(inativo, /class="[^"]*\bon\b/, 'o não marcado continua vazio');
+  assert.match(estoque, /\bon\b/, 'TCheckBox grava State = cbChecked, e vale igual');
+  assert.match(ativo, /\brad\b/, 'rádio é redondo, caixa é quadrada');
+  assert.doesNotMatch(estoque, /class="[^"]*\brad\b/);
+});
+
+test('Lines.Strings preserva a quebra de linha', () => {
+  const html = renderFid();
+  // as alças de redimensionamento vêm antes do conteúdo e ocupam ~300 caracteres
+  const i = html.indexOf('data-name="MemoObs"');
+  const trecho = html.slice(i, html.indexOf('</div>', i));
+  assert.match(trecho, /class="cap ml"/, 'conteúdo de várias linhas tem tratamento próprio');
+  assert.ok(trecho.includes(`primeira linha\nsegunda linha`),
+    'emendar as linhas produzia "primeira linhasegunda linha"');
+});
