@@ -170,4 +170,4 @@ onde um diagnóstico chegou a produzir 8.158 avisos falsos antes de virar 3 verd
 
 ---
 
-MIT.
+[MIT](./LICENSE).
